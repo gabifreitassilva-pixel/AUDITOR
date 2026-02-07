@@ -14,7 +14,7 @@
         .orange-accent { color: #FF8C00; }
         .orange-border-top { border-top: 4px solid #FF8C00; }
         .orange-border-left { border-left: 4px solid #FF8C00; }
-        .btn-orange { background-color: #FF8C00; color: #000; font-weight: 900; text-transform: uppercase; transition: all 0.2s; }
+        .btn-orange { background-color: #FF8C00; color: #000; font-weight: 900; text-transform: uppercase; transition: all 0.2s; border: none; cursor: pointer; }
         .btn-orange:hover:not(:disabled) { background-color: #ff9d26; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4); }
         .btn-orange:disabled { background-color: #333; color: #666; cursor: not-allowed; }
         input[readonly] { background-color: #111 !important; color: #ccc !important; border-color: #222 !important; }
@@ -23,11 +23,6 @@
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #FF8C00; }
-        .badge-tax { font-size: 8px; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-right: 2px; display: inline-block; }
-        .bg-pis { background-color: #3b82f6; color: white; }
-        .bg-cof { background-color: #6366f1; color: white; }
-        .bg-icms { background-color: #f59e0b; color: white; }
-        .bg-ncm-sug { background-color: #10b981; color: white; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -124,17 +119,18 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyAkgh6778FzobRxLl3trFE0KQ2D9PJOYrA",
-  authDomain: "auditor-fiscal-pro.firebaseapp.com",
-  projectId: "auditor-fiscal-pro",
-  storageBucket: "auditor-fiscal-pro.firebasestorage.app",
-  messagingSenderId: "901682265807",
-  appId: "1:901682265807:web:0b399cf95a7213fdeec1ba",
-  measurementId: "G-MZ3MTGMEJ0"
-};
-        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'auditor-sp-pro-v7';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAkgh6778FzobRxLl3trFE0KQ2D9PJOYra",
+            authDomain: "auditor-fiscal-pro.firebaseapp.com",
+            projectId: "auditor-fiscal-pro",
+            storageBucket: "auditor-fiscal-pro.firebasestorage.app",
+            messagingSenderId: "901682265807",
+            appId: "1:901682265807:web:0b399cf95a7213fdeec1ba",
+            measurementId: "G-MZ3MTGMEJ0"
+        };
+
+        const appId = 'auditor-sp-pro-v7';
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -148,7 +144,7 @@ const firebaseConfig = {
             { keywords: ["CERVEJA", "CHOPP"], sNCM: "2203.00.00", icmsST: true, pisMono: true, sugPIS: "04", sugCOF: "04", sugICMS: "060", rP: 0.0165, rC: 0.076, rI: 0.18 }
         ];
 
-        window.onload = async () => { try { await signInAnonymously(auth); onAuthStateChanged(auth, u => currentUser = u); } catch (e) { console.error("Offline"); } };
+        window.onload = async () => { try { await signInAnonymously(auth); onAuthStateChanged(auth, u => currentUser = u); } catch (e) { console.error("Erro Auth:", e); } };
 
         window.handleFileChange = (e) => { 
             filesQueue = Array.from(e.target.files); 
@@ -191,9 +187,9 @@ const firebaseConfig = {
 
         function performCoreAudit(item, origin, period) {
             state.itemCount++;
-            let total = 0, status = "CONFORME", critical = false;
+            let total = 0, status = "CONFORME";
             const matched = INTELLIGENCE_DB.find(r => r.keywords.some(k => item.xProd.toUpperCase().includes(k)));
-            if(matched) { critical = true; status = "DIVERGENTE"; total = item.vProd * 0.04; }
+            if(matched) { status = "DIVERGENTE"; total = item.vProd * 0.04; }
             state.totalRecovery += total;
             state.auditDetails.push({ ...item, status, total, mes: period });
             const tr = document.createElement('tr');
@@ -207,19 +203,27 @@ const firebaseConfig = {
             document.getElementById('kpi-items').innerText = state.itemCount;
             document.getElementById('kpi-recovery').innerText = state.totalRecovery.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
             document.getElementById('loader').classList.add('hidden');
-            document.getElementById('btn-excel').disabled = false;
             document.getElementById('btn-save').disabled = false;
             document.getElementById('completion-modal').classList.remove('hidden');
         }
 
         window.persistAuditData = async () => {
-            const fb = document.getElementById('fb-msg'); fb.innerText = "GRAVANDO...";
+            const fb = document.getElementById('fb-msg'); 
+            fb.innerText = "GRAVANDO...";
+            if(!currentUser) { fb.innerText = "ERRO: SEM AUTH"; return; }
             try {
-                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'audits'), { uid: currentUser.uid, empresa: state.company, valor: state.totalRecovery, data: new Date().toISOString() });
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'audits'), { 
+                    uid: currentUser.uid, 
+                    empresa: state.company, 
+                    valor: state.totalRecovery, 
+                    data: new Date().toISOString() 
+                });
                 fb.innerText = "SUCESSO!"; fb.style.color = "#10b981";
-            } catch (e) { fb.innerText = "ERRO!"; fb.style.color = "#ef4444"; }
+            } catch (e) { 
+                console.error(e);
+                fb.innerText = "ERRO AO GRAVAR"; fb.style.color = "#ef4444"; 
+            }
         };
     </script>
 </body>
 </html>
-
