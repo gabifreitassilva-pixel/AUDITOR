@@ -124,11 +124,11 @@
                     <i class="fas fa-folder-open orange-accent"></i>Importar Notas (XML)
                 </h2>
                 <div class="flex-1 border-2 border-dashed border-zinc-800 rounded-lg flex flex-col items-center justify-center p-4 group hover:border-orange-500 transition cursor-pointer" onclick="document.getElementById('xml-input').click()">
-                    <input type="file" id="xml-input" multiple accept=".xml" class="hidden" onchange="handleFileChange(event)">
+                    <input type="file" id="xml-input" multiple accept=".xml" class="hidden" onchange="window.handleFileChange(event)">
                     <i class="fas fa-cloud-arrow-up text-3xl text-zinc-700 mb-2 group-hover:text-orange-500"></i>
                     <p id="upload-status" class="text-xs text-zinc-500 font-medium text-center uppercase tracking-tighter">Selecione arquivos SAT/NFe</p>
                 </div>
-                <button id="btn-start" disabled onclick="runFullSemanticAudit()" class="btn-orange mt-4 py-4 rounded-lg flex items-center justify-center gap-2 shadow-lg">
+                <button id="btn-start" disabled onclick="window.runFullSemanticAudit()" class="btn-orange mt-4 py-4 rounded-lg flex items-center justify-center gap-2 shadow-lg">
                     <i class="fas fa-bolt"></i> Iniciar Auditoria
                 </button>
             </div>
@@ -138,16 +138,16 @@
                     <i class="fas fa-gears orange-accent"></i>Gerenciamento
                 </h2>
                 <div class="space-y-3">
-                    <button id="btn-excel" disabled onclick="exportComparativeExcel()" class="w-full btn-orange py-3 rounded flex items-center justify-center gap-2">
+                    <button id="btn-excel" disabled onclick="window.exportComparativeExcel()" class="w-full btn-orange py-3 rounded flex items-center justify-center gap-2">
                         <i class="fas fa-file-excel"></i> Exportar para Excel
                     </button>
 
                     <button id="btn-import-excel" onclick="document.getElementById('excel-import-input').click()" class="w-full btn-orange py-3 rounded flex items-center justify-center gap-2">
                         <i class="fas fa-file-import"></i> Importar Auditoria Excel
                     </button>
-                    <input type="file" id="excel-import-input" accept=".csv" class="hidden" onchange="handleExcelImport(event)">
+                    <input type="file" id="excel-import-input" accept=".csv" class="hidden" onchange="window.handleExcelImport(event)">
 
-                    <button id="btn-save" disabled onclick="persistAuditData()" class="w-full btn-orange py-3 rounded flex items-center justify-center gap-2">
+                    <button id="btn-save" disabled onclick="window.persistAuditData()" class="w-full btn-orange py-3 rounded flex items-center justify-center gap-2">
                         <i class="fas fa-save"></i> Gravar Auditoria
                     </button>
                     <button onclick="window.location.reload()" class="w-full border border-zinc-800 py-3 rounded text-zinc-500 font-bold hover:bg-zinc-900 transition text-xs uppercase">
@@ -222,6 +222,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Inicialização do Firebase (usando config injetada ou vazia)
         const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'auditor-sp-pro-v7';
         const app = initializeApp(firebaseConfig);
@@ -247,10 +248,11 @@
         window.onload = async () => {
             try {
                 await signInAnonymously(auth);
-                onAuthStateChanged(auth, u => currentUser = u);
-            } catch (e) { console.error("Firebase offline"); }
+                onAuthStateChanged(auth, u => { currentUser = u; });
+            } catch (e) { console.warn("Firebase operando em modo offline."); }
         };
 
+        // EXPOSTO AO WINDOW PARA O ONCHANGE FUNCIONAR
         window.handleFileChange = (event) => {
             filesQueue = Array.from(event.target.files);
             if (filesQueue.length > 0) {
@@ -282,12 +284,8 @@
         window.handleExcelImport = (event) => {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target.result;
-                processExcelData(text);
-            };
+            reader.onload = (e) => processExcelData(e.target.result);
             reader.readAsText(file);
         };
 
@@ -295,26 +293,16 @@
             resetState();
             const lines = csvText.split(/\r?\n/);
             if (lines.length < 2) return;
-
             for (let i = 1; i < lines.length; i++) {
                 if (!lines[i].trim()) continue;
                 const cols = lines[i].split(";");
-                
                 if (!state.company) {
                     state.company = cols[0] || 'N/A';
                     state.cnpj = cols[1]?.replace(/[="]/g, '') || 'N/A';
                     state.regime = cols[2] || 'N/A';
                 }
                 state.competences.add(cols[3]);
-                
-                const reItem = {
-                    docId: cols[4],
-                    xProd: cols[5],
-                    ncm: cols[6],
-                    oP: cols[7], oC: cols[9], oI: cols[11], oIPI: cols[13],
-                    vProd: 100 
-                };
-
+                const reItem = { docId: cols[4], xProd: cols[5], ncm: cols[6], oP: cols[7], oC: cols[9], oI: cols[11], oIPI: cols[13], vProd: 100 };
                 performCoreAudit(reItem, "Importação Excel", cols[3]);
             }
             finalizeAudit("Re-auditoria via Excel finalizada.");
@@ -330,7 +318,6 @@
             const nCFe = xml.getElementsByTagName("nCFe")[0]?.textContent;
             const nNF = xml.getElementsByTagName("nNF")[0]?.textContent;
             const docId = nCFe || nNF || 'S/N';
-
             const crt = xml.getElementsByTagName("CRT")[0]?.textContent || xml.getElementsByTagName("cRegTrib")[0]?.textContent;
             const emit = xml.getElementsByTagName("emit")[0];
             
@@ -352,7 +339,6 @@
             Array.from(dets).forEach(item => {
                 const prod = item.getElementsByTagName("prod")[0];
                 const icms = item.getElementsByTagName("ICMS")[0];
-                
                 const itemObj = {
                     docId,
                     xProd: prod?.getElementsByTagName("xProd")[0]?.textContent || "",
@@ -371,7 +357,7 @@
             state.itemCount++;
             let status = "CONFORME", critical = false;
             let recP = 0, recC = 0, recI = 0;
-            let sNCM_UI = "", sP_UI = "", sC_UI = "", sI_UI = "", sIPI_UI = "";
+            let sNCM_UI = "", sP_UI = "", sC_UI = "", sI_UI = "";
 
             const matchedRule = INTELLIGENCE_DB.find(r => r.keywords.some(k => item.xProd.toUpperCase().includes(k)));
 
@@ -439,7 +425,6 @@
             document.getElementById('kpi-items').innerText = state.itemCount;
             document.getElementById('kpi-errors').innerText = state.itemCount > 0 ? `${((state.errorCount/state.itemCount)*100).toFixed(1)}%` : "0%";
             document.getElementById('kpi-recovery').innerText = state.totalRecovery.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-            
             document.getElementById('loader').classList.add('hidden');
             document.getElementById('btn-excel').disabled = false;
             document.getElementById('btn-save').disabled = false;
