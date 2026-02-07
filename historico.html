@@ -68,7 +68,6 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Header -->
     <header class="bg-black text-white p-6 border-b border-zinc-800 shadow-2xl sticky top-0 z-50">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-4">
@@ -81,7 +80,7 @@
                 </div>
             </div>
             <div class="flex gap-4">
-                <a href="auditor_fiscal.html" class="px-4 py-2 border border-zinc-700 rounded-lg text-xs font-bold hover:bg-zinc-900 transition flex items-center gap-2">
+                <a href="AUDITOR.HTML" class="px-4 py-2 border border-zinc-700 rounded-lg text-xs font-bold hover:bg-zinc-900 transition flex items-center gap-2">
                     <i class="fas fa-arrow-left"></i> VOLTAR PARA AUDITORIA
                 </a>
             </div>
@@ -90,7 +89,6 @@
 
     <main class="container mx-auto py-8 px-4 flex-1">
         
-        <!-- Dashboard de Gestão -->
         <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <div class="dashboard-card p-5 rounded-xl border-l-4 border-orange-500 shadow-lg">
                 <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Total de Auditorias</p>
@@ -110,7 +108,6 @@
             </div>
         </section>
 
-        <!-- Filtros e Busca -->
         <section class="dashboard-card p-6 rounded-xl mb-8 border-t-2 border-orange-500">
             <div class="flex flex-col md:flex-row gap-4 items-end">
                 <div class="flex-1">
@@ -144,7 +141,6 @@
             </div>
         </section>
 
-        <!-- Tabela de Histórico -->
         <section class="dashboard-card rounded-xl overflow-hidden shadow-2xl">
             <div class="p-5 border-b border-zinc-800 bg-zinc-900/40 flex justify-between items-center">
                 <h2 class="font-bold text-zinc-200 uppercase text-xs tracking-widest">Registros de Auditorias Realizadas</h2>
@@ -165,7 +161,6 @@
                         </tr>
                     </thead>
                     <tbody id="history-body" class="divide-y divide-zinc-900 text-zinc-300">
-                        <!-- Conteúdo carregado via Firebase -->
                     </tbody>
                 </table>
                 <div id="empty-history" class="p-32 text-center text-zinc-800">
@@ -176,7 +171,6 @@
         </section>
     </main>
 
-    <!-- Modal de Confirmação de Exclusão -->
     <div id="delete-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200] flex items-center justify-center hidden">
         <div class="bg-zinc-900 border border-red-500 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
             <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -193,10 +187,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, query, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configurações Globais (Fornecidas pelo ambiente)
         const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'auditor-sp-pro-v7';
         const app = initializeApp(firebaseConfig);
@@ -208,74 +201,41 @@
         let currentUser = null;
 
         window.onload = async () => {
-            await initAuth();
-        };
-
-        async function initAuth() {
             try {
-                // REGRA 3: Chamar signIn FIRST e aguardar
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                
-                // Monitorar estado da autenticação
+                await signInAnonymously(auth);
                 onAuthStateChanged(auth, (user) => {
                     currentUser = user;
-                    if (user) {
-                        fetchHistory();
-                    }
+                    if (user) window.fetchHistory();
                 });
-            } catch (e) { 
-                console.error("Erro de Autenticação", e); 
-            }
-        }
+            } catch (e) { console.error("Erro Auth:", e); }
+        };
 
-        // Busca dados em tempo real
-        function fetchHistory() {
-            // Proteção contra chamadas sem usuário (Regra 3)
+        window.fetchHistory = () => {
             if (!currentUser) return;
-
             const loader = document.getElementById('loader');
             if (loader) loader.classList.remove('hidden');
 
-            // REGRA 1: Caminho estrito para dados públicos
-            const collectionPath = collection(db, 'artifacts', appId, 'public', 'data', 'audits');
-            
-            // REGRA 2: Query simples (sem orderBy/where complexos)
-            const q = query(collectionPath);
+            const q = query(collection(db, 'artifacts', appId, 'public', 'data', 'audits'));
             
             onSnapshot(q, (snapshot) => {
                 allRecords = [];
-                snapshot.forEach(doc => {
-                    allRecords.push({ id: doc.id, ...doc.data() });
-                });
+                snapshot.forEach(doc => { allRecords.push({ id: doc.id, ...doc.data() }); });
                 
-                // Ordenação manual em memória para evitar necessidade de índices complexos (Regra 2)
-                allRecords.sort((a, b) => {
-                    const dateA = new Date(a.data || a.dataAuditoria || 0);
-                    const dateB = new Date(b.data || b.dataAuditoria || 0);
-                    return dateB - dateA;
-                });
+                allRecords.sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0));
                 
                 renderTable(allRecords);
                 updateStats(allRecords);
                 
                 if (loader) loader.classList.add('hidden');
-                const lastSyncEl = document.getElementById('last-sync');
-                if (lastSyncEl) lastSyncEl.innerText = new Date().toLocaleTimeString('pt-BR');
-            }, (error) => {
-                console.error("Erro ao ler banco:", error);
-                if (loader) loader.classList.add('hidden');
+                if (document.getElementById('last-sync')) 
+                    document.getElementById('last-sync').innerText = new Date().toLocaleTimeString('pt-BR');
             });
-        }
+        };
 
         function renderTable(data) {
             const tbody = document.getElementById('history-body');
             const emptyState = document.getElementById('empty-history');
             if (!tbody) return;
-            
             tbody.innerHTML = "";
 
             if (data.length === 0) {
@@ -287,31 +247,18 @@
             data.forEach(rec => {
                 const tr = document.createElement('tr');
                 tr.className = "row-hover transition border-b border-zinc-900";
-                
-                const dateRaw = rec.data || rec.dataAuditoria || rec.timestamp;
-                const dateFormated = dateRaw ? new Date(dateRaw).toLocaleDateString('pt-BR') : '---';
-                const valorFormated = (rec.valor || rec.valorTotalRecuperavel || rec.recuperavel || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                
-                // Normalização das tags de competência gravadas anteriormente
-                const comps = rec.mes || 
-                              (rec.periodos ? rec.periodos.join(", ") : 
-                              (rec.competencias ? rec.competencias.join(", ") : '---'));
+                const dateVal = rec.data ? new Date(rec.data).toLocaleDateString('pt-BR') : '---';
+                const valorVal = (rec.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
                 tr.innerHTML = `
-                    <td class="p-4 font-bold text-zinc-500">${dateFormated}</td>
+                    <td class="p-4 font-bold text-zinc-500">${dateVal}</td>
                     <td class="p-4">
-                        <div class="font-black text-white uppercase truncate w-48">${rec.empresa || rec.name || 'Empresa S/N'}</div>
-                        <div class="text-[9px] text-orange-500 font-mono">${rec.cnpj || '00.000.000/0000-00'}</div>
+                        <div class="font-black text-white uppercase truncate w-48">${rec.empresa || 'Empresa S/N'}</div>
                     </td>
-                    <td class="p-4 text-[10px] font-bold text-zinc-400">
-                        <div class="max-w-[200px] truncate">${comps}</div>
-                    </td>
-                    <td class="p-4 text-center">
-                        <div class="text-[10px] font-bold text-zinc-500">${rec.xmls || rec.xmlCount || 0} XMLs</div>
-                        <div class="text-[9px] text-zinc-600">${rec.itens || rec.itemCount || 0} Itens</div>
-                    </td>
+                    <td class="p-4 text-[10px] font-bold text-zinc-400">---</td>
+                    <td class="p-4 text-center">---</td>
                     <td class="p-4 text-right">
-                        <div class="text-green-500 font-black text-lg">${valorFormated}</div>
+                        <div class="text-green-500 font-black text-lg">${valorVal}</div>
                     </td>
                     <td class="p-4 text-center">
                         <button onclick="openDeleteModal('${rec.id}')" class="text-zinc-700 hover:text-red-500 transition px-2 py-1">
@@ -324,67 +271,36 @@
         }
 
         function updateStats(data) {
-            const totalAuditsEl = document.getElementById('total-audits');
-            const totalCompaniesEl = document.getElementById('total-companies');
-            const grandTotalRecoveryEl = document.getElementById('grand-total-recovery');
-
-            if (totalAuditsEl) totalAuditsEl.innerText = data.length;
-            
-            const companies = new Set(data.map(r => r.cnpj || r.empresa));
-            if (totalCompaniesEl) totalCompaniesEl.innerText = companies.size;
-
-            const sum = data.reduce((acc, curr) => acc + (curr.valor || curr.valorTotalRecuperavel || curr.recuperavel || 0), 0);
-            if (grandTotalRecoveryEl) grandTotalRecoveryEl.innerText = sum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('total-audits').innerText = data.length;
+            const companies = new Set(data.map(r => r.empresa));
+            document.getElementById('total-companies').innerText = companies.size;
+            const sum = data.reduce((acc, curr) => acc + (curr.valor || 0), 0);
+            document.getElementById('grand-total-recovery').innerText = sum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
         window.filterTable = () => {
             const search = document.getElementById('search-input').value.toUpperCase();
-            const month = document.getElementById('month-filter').value.toUpperCase();
-
-            const filtered = allRecords.filter(rec => {
-                const emp = (rec.empresa || rec.name || "").toUpperCase();
-                const cnpj = (rec.cnpj || "").toUpperCase();
-                const matchesSearch = emp.includes(search) || cnpj.includes(search);
-                
-                const comps = (rec.mes || "").toUpperCase() + 
-                              (rec.periodos ? rec.periodos.join(" ") : "").toUpperCase() +
-                              (rec.competencias ? rec.competencias.join(" ") : "").toUpperCase();
-                
-                const matchesMonth = month === "" || comps.includes(month);
-                
-                return matchesSearch && matchesMonth;
-            });
-
+            const filtered = allRecords.filter(rec => (rec.empresa || "").toUpperCase().includes(search));
             renderTable(filtered);
         };
 
-        // --- Gestão de Exclusão ---
         window.openDeleteModal = (id) => {
             itemToDelete = id;
-            const modal = document.getElementById('delete-modal');
-            if (modal) modal.classList.remove('hidden');
+            document.getElementById('delete-modal').classList.remove('hidden');
         };
 
         window.closeDeleteModal = () => {
             itemToDelete = null;
-            const modal = document.getElementById('delete-modal');
-            if (modal) modal.classList.add('hidden');
+            document.getElementById('delete-modal').classList.add('hidden');
         };
 
-        const confirmBtn = document.getElementById('confirm-delete-btn');
-        if (confirmBtn) {
-            confirmBtn.onclick = async () => {
-                if (!itemToDelete || !currentUser) return;
-                try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'audits', itemToDelete));
-                    closeDeleteModal();
-                } catch (e) { 
-                    console.error("Erro ao excluir:", e);
-                    alert("Erro ao excluir do banco de dados."); 
-                }
-            };
-        }
-
+        document.getElementById('confirm-delete-btn').onclick = async () => {
+            if (!itemToDelete || !currentUser) return;
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'audits', itemToDelete));
+                window.closeDeleteModal();
+            } catch (e) { alert("Erro ao excluir."); }
+        };
     </script>
 </body>
 </html>
