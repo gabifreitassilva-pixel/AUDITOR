@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Auditorias - Auditor Fiscal Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        body {
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .dashboard-card { 
+            background-color: #0a0a0a;
+            border: 1px solid #222;
+            transition: all 0.3s ease;
+        }
+        
+        .dashboard-card:hover { border-color: #FF8C00; }
+        .orange-accent { color: #FF8C00; }
+        .bg-orange-accent { background-color: #FF8C00; }
+        .border-orange { border-color: #FF8C00; }
+
+        .btn-orange {
+            background-color: #FF8C00;
+            color: #000;
+            font-weight: 900;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .btn-orange:hover {
+            background-color: #ff9d26;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4);
+        }
+
+        .table-container { 
+            max-height: 600px; 
+            overflow-y: auto; 
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #FF8C00; }
+
+        .search-input {
+            background-color: #111 !important;
+            border: 1px solid #333 !important;
+            color: white !important;
+        }
+        
+        .search-input:focus {
+            border-color: #FF8C00 !important;
+            outline: none;
+        }
+
+        .row-hover:hover {
+            background-color: rgba(255, 140, 0, 0.05);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-black text-white p-6 border-b border-zinc-800 shadow-2xl sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="bg-orange-500 p-2 rounded-lg shadow-[0_0_15px_rgba(255,140,0,0.4)]">
+                    <i class="fas fa-database text-black text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black tracking-tighter uppercase italic">Histórico <span class="orange-accent">Auditor</span></h1>
+                    <p class="text-[10px] opacity-60 uppercase tracking-[0.3em]">Central de Consultas e Relatórios Gravados</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <a href="auditor_fiscal.html" class="px-4 py-2 border border-zinc-700 rounded-lg text-xs font-bold hover:bg-zinc-900 transition flex items-center gap-2">
+                    <i class="fas fa-arrow-left"></i> VOLTAR PARA AUDITORIA
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto py-8 px-4 flex-1">
+        
+        <!-- Dashboard de Gestão -->
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div class="dashboard-card p-5 rounded-xl border-l-4 border-orange-500 shadow-lg">
+                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Total de Auditorias</p>
+                <h3 id="total-audits" class="text-3xl font-black text-white">0</h3>
+            </div>
+            <div class="dashboard-card p-5 rounded-xl border-l-4 border-blue-500 shadow-lg">
+                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Empresas Distintas</p>
+                <h3 id="total-companies" class="text-3xl font-black text-white">0</h3>
+            </div>
+            <div class="dashboard-card p-5 rounded-xl border-l-4 border-green-500 shadow-lg">
+                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Recuperação Acumulada</p>
+                <h3 id="grand-total-recovery" class="text-3xl font-black text-green-500">R$ 0,00</h3>
+            </div>
+            <div class="dashboard-card p-5 rounded-xl border-l-4 border-zinc-700 shadow-lg">
+                <p class="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Última Sincronização</p>
+                <h3 id="last-sync" class="text-lg font-bold text-zinc-400 mt-2">--:--</h3>
+            </div>
+        </section>
+
+        <!-- Filtros e Busca -->
+        <section class="dashboard-card p-6 rounded-xl mb-8 border-t-2 border-orange-500">
+            <div class="flex flex-col md:flex-row gap-4 items-end">
+                <div class="flex-1">
+                    <label class="text-[10px] text-zinc-500 font-bold uppercase mb-1 block">Buscar Empresa ou CNPJ</label>
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-3 text-zinc-500"></i>
+                        <input type="text" id="search-input" oninput="filterTable()" placeholder="Digite o nome da empresa..." class="search-input w-full pl-10 pr-4 py-2 rounded-lg text-sm">
+                    </div>
+                </div>
+                <div class="w-full md:w-48">
+                    <label class="text-[10px] text-zinc-500 font-bold uppercase mb-1 block">Filtrar por Mês</label>
+                    <select id="month-filter" onchange="filterTable()" class="search-input w-full py-2 rounded-lg text-sm px-2">
+                        <option value="">Todos os Meses</option>
+                        <option value="JANEIRO">Janeiro</option>
+                        <option value="FEVEREIRO">Fevereiro</option>
+                        <option value="MARÇO">Março</option>
+                        <option value="ABRIL">Abril</option>
+                        <option value="MAIO">Maio</option>
+                        <option value="JUNHO">Junho</option>
+                        <option value="JULHO">Julho</option>
+                        <option value="AGOSTO">Agosto</option>
+                        <option value="SETEMBRO">Setembro</option>
+                        <option value="OUTUBRO">Outubro</option>
+                        <option value="NOVEMBRO">Novembro</option>
+                        <option value="DEZEMBRO">Dezembro</option>
+                    </select>
+                </div>
+                <button onclick="fetchHistory()" class="btn-orange px-6 py-2 rounded-lg text-sm flex items-center gap-2">
+                    <i class="fas fa-sync"></i> ATUALIZAR
+                </button>
+            </div>
+        </section>
+
+        <!-- Tabela de Histórico -->
+        <section class="dashboard-card rounded-xl overflow-hidden shadow-2xl">
+            <div class="p-5 border-b border-zinc-800 bg-zinc-900/40 flex justify-between items-center">
+                <h2 class="font-bold text-zinc-200 uppercase text-xs tracking-widest">Registros de Auditorias Realizadas</h2>
+                <div id="loader" class="hidden text-orange-500 text-[10px] font-bold animate-pulse">
+                    <i class="fas fa-spinner fa-spin mr-1"></i> ACESSANDO NUVEM...
+                </div>
+            </div>
+            <div class="table-container">
+                <table class="w-full text-left text-sm" id="history-table">
+                    <thead class="bg-black text-zinc-500 sticky top-0 z-10 border-b border-zinc-800">
+                        <tr class="uppercase text-[10px] font-bold">
+                            <th class="p-4">Data Proc.</th>
+                            <th class="p-4">Empresa / CNPJ</th>
+                            <th class="p-4">Competências</th>
+                            <th class="p-4 text-center">Volume</th>
+                            <th class="p-4 text-right">Valor Recuperável</th>
+                            <th class="p-4 text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body" class="divide-y divide-zinc-900 text-zinc-300">
+                        <!-- Conteúdo carregado via Firebase -->
+                    </tbody>
+                </table>
+                <div id="empty-history" class="p-32 text-center text-zinc-800">
+                    <i class="fas fa-folder-open text-6xl mb-4 block opacity-10"></i>
+                    <p class="font-bold uppercase tracking-widest text-xs">Nenhum registro encontrado no banco de dados.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <div id="delete-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200] flex items-center justify-center hidden">
+        <div class="bg-zinc-900 border border-red-500 p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+            <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-exclamation-triangle text-white text-2xl"></i>
+            </div>
+            <h3 class="text-xl font-black text-white uppercase mb-2">Excluir Auditoria?</h3>
+            <p class="text-zinc-400 text-sm mb-6">Esta ação é permanente e removerá os dados do histórico.</p>
+            <div class="flex gap-2">
+                <button onclick="closeDeleteModal()" class="flex-1 py-2 border border-zinc-700 rounded-lg text-xs font-bold hover:bg-zinc-800">CANCELAR</button>
+                <button id="confirm-delete-btn" class="flex-1 py-2 bg-red-600 rounded-lg text-xs font-bold hover:bg-red-700">EXCLUIR AGORA</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configurações Globais (Fornecidas pelo ambiente)
+        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'auditor-sp-pro-v7';
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let allRecords = [];
+        let itemToDelete = null;
+        let currentUser = null;
+
+        window.onload = async () => {
+            await initAuth();
+        };
+
+        async function initAuth() {
+            try {
+                // REGRA 3: Chamar signIn FIRST e aguardar
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                // Monitorar estado da autenticação
+                onAuthStateChanged(auth, (user) => {
+                    currentUser = user;
+                    if (user) {
+                        fetchHistory();
+                    }
+                });
+            } catch (e) { 
+                console.error("Erro de Autenticação", e); 
+            }
+        }
+
+        // Busca dados em tempo real
+        function fetchHistory() {
+            // Proteção contra chamadas sem usuário (Regra 3)
+            if (!currentUser) return;
+
+            const loader = document.getElementById('loader');
+            if (loader) loader.classList.remove('hidden');
+
+            // REGRA 1: Caminho estrito para dados públicos
+            const collectionPath = collection(db, 'artifacts', appId, 'public', 'data', 'audits');
+            
+            // REGRA 2: Query simples (sem orderBy/where complexos)
+            const q = query(collectionPath);
+            
+            onSnapshot(q, (snapshot) => {
+                allRecords = [];
+                snapshot.forEach(doc => {
+                    allRecords.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Ordenação manual em memória para evitar necessidade de índices complexos (Regra 2)
+                allRecords.sort((a, b) => {
+                    const dateA = new Date(a.data || a.dataAuditoria || 0);
+                    const dateB = new Date(b.data || b.dataAuditoria || 0);
+                    return dateB - dateA;
+                });
+                
+                renderTable(allRecords);
+                updateStats(allRecords);
+                
+                if (loader) loader.classList.add('hidden');
+                const lastSyncEl = document.getElementById('last-sync');
+                if (lastSyncEl) lastSyncEl.innerText = new Date().toLocaleTimeString('pt-BR');
+            }, (error) => {
+                console.error("Erro ao ler banco:", error);
+                if (loader) loader.classList.add('hidden');
+            });
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('history-body');
+            const emptyState = document.getElementById('empty-history');
+            if (!tbody) return;
+            
+            tbody.innerHTML = "";
+
+            if (data.length === 0) {
+                if (emptyState) emptyState.classList.remove('hidden');
+                return;
+            }
+            if (emptyState) emptyState.classList.add('hidden');
+
+            data.forEach(rec => {
+                const tr = document.createElement('tr');
+                tr.className = "row-hover transition border-b border-zinc-900";
+                
+                const dateRaw = rec.data || rec.dataAuditoria || rec.timestamp;
+                const dateFormated = dateRaw ? new Date(dateRaw).toLocaleDateString('pt-BR') : '---';
+                const valorFormated = (rec.valor || rec.valorTotalRecuperavel || rec.recuperavel || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                
+                // Normalização das tags de competência gravadas anteriormente
+                const comps = rec.mes || 
+                              (rec.periodos ? rec.periodos.join(", ") : 
+                              (rec.competencias ? rec.competencias.join(", ") : '---'));
+
+                tr.innerHTML = `
+                    <td class="p-4 font-bold text-zinc-500">${dateFormated}</td>
+                    <td class="p-4">
+                        <div class="font-black text-white uppercase truncate w-48">${rec.empresa || rec.name || 'Empresa S/N'}</div>
+                        <div class="text-[9px] text-orange-500 font-mono">${rec.cnpj || '00.000.000/0000-00'}</div>
+                    </td>
+                    <td class="p-4 text-[10px] font-bold text-zinc-400">
+                        <div class="max-w-[200px] truncate">${comps}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <div class="text-[10px] font-bold text-zinc-500">${rec.xmls || rec.xmlCount || 0} XMLs</div>
+                        <div class="text-[9px] text-zinc-600">${rec.itens || rec.itemCount || 0} Itens</div>
+                    </td>
+                    <td class="p-4 text-right">
+                        <div class="text-green-500 font-black text-lg">${valorFormated}</div>
+                    </td>
+                    <td class="p-4 text-center">
+                        <button onclick="openDeleteModal('${rec.id}')" class="text-zinc-700 hover:text-red-500 transition px-2 py-1">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateStats(data) {
+            const totalAuditsEl = document.getElementById('total-audits');
+            const totalCompaniesEl = document.getElementById('total-companies');
+            const grandTotalRecoveryEl = document.getElementById('grand-total-recovery');
+
+            if (totalAuditsEl) totalAuditsEl.innerText = data.length;
+            
+            const companies = new Set(data.map(r => r.cnpj || r.empresa));
+            if (totalCompaniesEl) totalCompaniesEl.innerText = companies.size;
+
+            const sum = data.reduce((acc, curr) => acc + (curr.valor || curr.valorTotalRecuperavel || curr.recuperavel || 0), 0);
+            if (grandTotalRecoveryEl) grandTotalRecoveryEl.innerText = sum.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        window.filterTable = () => {
+            const search = document.getElementById('search-input').value.toUpperCase();
+            const month = document.getElementById('month-filter').value.toUpperCase();
+
+            const filtered = allRecords.filter(rec => {
+                const emp = (rec.empresa || rec.name || "").toUpperCase();
+                const cnpj = (rec.cnpj || "").toUpperCase();
+                const matchesSearch = emp.includes(search) || cnpj.includes(search);
+                
+                const comps = (rec.mes || "").toUpperCase() + 
+                              (rec.periodos ? rec.periodos.join(" ") : "").toUpperCase() +
+                              (rec.competencias ? rec.competencias.join(" ") : "").toUpperCase();
+                
+                const matchesMonth = month === "" || comps.includes(month);
+                
+                return matchesSearch && matchesMonth;
+            });
+
+            renderTable(filtered);
+        };
+
+        // --- Gestão de Exclusão ---
+        window.openDeleteModal = (id) => {
+            itemToDelete = id;
+            const modal = document.getElementById('delete-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+
+        window.closeDeleteModal = () => {
+            itemToDelete = null;
+            const modal = document.getElementById('delete-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        const confirmBtn = document.getElementById('confirm-delete-btn');
+        if (confirmBtn) {
+            confirmBtn.onclick = async () => {
+                if (!itemToDelete || !currentUser) return;
+                try {
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'audits', itemToDelete));
+                    closeDeleteModal();
+                } catch (e) { 
+                    console.error("Erro ao excluir:", e);
+                    alert("Erro ao excluir do banco de dados."); 
+                }
+            };
+        }
+
+    </script>
+</body>
+</html>
