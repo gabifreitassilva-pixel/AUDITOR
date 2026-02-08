@@ -3,50 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Principal - Auditor Fiscal Pro</title>
+    <title>Dashboard Integrado | FISCAL AUDIT PRO</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { background-color: #000000; color: #ffffff; font-family: 'Inter', sans-serif; background-image: radial-gradient(circle at top right, #1a1a1a, #000000); }
-        .menu-card { background-color: #0a0a0a; border: 1px solid #222; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); cursor: pointer; text-decoration: none; color: inherit; }
-        .menu-card:hover { border-color: #FF8C00; transform: translateY(-10px); background-color: #111; }
-        .orange-accent { color: #FF8C00; }
-        .icon-box { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border-radius: 15px; font-size: 24px; margin-bottom: 20px; background: #1a1a1a; color: #FF8C00; transition: all 0.3s; }
-        .menu-card:hover .icon-box { background: #FF8C00; color: #000; box-shadow: 0 0 20px rgba(255, 140, 0, 0.4); }
-        .status-dot { height: 8px; width: 8px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 10px #10b981; }
+        body { background-color: #050505; color: #ffffff; font-family: 'Inter', sans-serif; overflow: hidden; }
+        .sidebar { width: 280px; background: #000; border-right: 1px solid #222; height: 100vh; }
+        .nav-item { padding: 12px 20px; font-size: 11px; font-weight: 700; color: #666; cursor: pointer; transition: 0.3s; text-transform: uppercase; border-left: 3px solid transparent; }
+        .nav-item:hover, .nav-item.active { background: #111; color: #FF8C00; border-left-color: #FF8C00; }
+        .main-view { flex: 1; height: 100vh; overflow-y: auto; background: radial-gradient(circle at top right, #111, #050505); }
+        .law-card { background: #0a0a0a; border: 1px solid #222; padding: 15px; border-radius: 12px; transition: 0.3s; }
+        .law-card:hover { border-color: #FF8C00; transform: translateY(-3px); }
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 1000; padding: 40px; }
+        .modal-content { background: #0a0a0a; border: 1px solid #FF8C00; width: 100%; height: 100%; border-radius: 20px; overflow: hidden; position: relative; }
+        iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col justify-center">
-    <div class="container mx-auto px-4 py-12">
-        <header class="text-center mb-16">
-            <div class="inline-block bg-orange-500 p-3 rounded-2xl mb-6 shadow-[0_0_30px_rgba(255,140,0,0.3)]">
-                <i class="fas fa-shield-halved text-black text-4xl"></i>
-            </div>
-            <h1 class="text-5xl font-black tracking-tighter uppercase italic mb-2">Auditor <span class="orange-accent">Fiscal</span> Pro</h1>
-            <p class="text-zinc-500 uppercase tracking-[0.5em] text-xs font-bold">Sistema de Inteligência Tributária & Auditoria Reversa</p>
-            <div class="mt-4 flex justify-center items-center gap-4 text-[10px] font-bold text-zinc-600 uppercase">
-                <span><span class="status-dot"></span> Cloud Database Online</span>
-                <span class="border-l border-zinc-800 pl-4">v7.2.0</span>
-            </div>
-        </header>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            <a href="auditor.html" class="menu-card p-10 rounded-3xl group">
-                <div class="icon-box"><i class="fas fa-magnifying-glass-chart"></i></div>
-                <h2 class="text-2xl font-black uppercase mb-3 group-hover:text-orange-500 transition">Nova Auditoria</h2>
-                <p class="text-zinc-500 text-sm leading-relaxed">Processe arquivos XML (NFe/SAT) ou planilhas CSV para identificar inconsistências de NCM, PIS/COFINS Monofásico e ICMS ST.</p>
-                <div class="mt-8 flex items-center text-xs font-black orange-accent tracking-widest uppercase">Acessar Ferramenta <i class="fas fa-arrow-right ml-2 group-hover:translate-x-2 transition-transform"></i></div>
-            </a>
-            <a href="histórico.html" class="menu-card p-10 rounded-3xl group">
-                <div class="icon-box"><i class="fas fa-database"></i></div>
-                <h2 class="text-2xl font-black uppercase mb-3 group-hover:text-orange-500 transition">Histórico de Dados</h2>
-                <p class="text-zinc-500 text-sm leading-relaxed">Visualize auditorias salvas, acompanhe o volume de recuperação acumulado por empresa e gere relatórios de conformidade.</p>
-                <div class="mt-8 flex items-center text-xs font-black orange-accent tracking-widest uppercase">Consultar Banco <i class="fas fa-arrow-right ml-2 group-hover:translate-x-2 transition-transform"></i></div>
-            </a>
+<body class="flex">
+
+    <aside class="sidebar flex flex-col">
+        <div class="p-6 border-b border-zinc-900">
+            <h1 class="text-xl font-black italic orange-accent">FISCAL<span class="text-white">AUDIT</span></h1>
+            <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mt-1">Audit Intelligence v7.2</p>
         </div>
-        <footer class="mt-20 text-center">
-            <p class="text-zinc-700 text-[10px] uppercase font-bold tracking-widest">Desenvolvido para Especialistas em Recuperação Tributária</p>
-        </footer>
+        
+        <nav class="flex-1 overflow-y-auto py-4">
+            <div class="px-6 py-2 text-[9px] text-zinc-600 font-black uppercase">Core Engine</div>
+            <div class="nav-item active" onclick="switchTab('home')"><i class="fas fa-chart-line mr-3"></i> Dashboard</div>
+            <div class="nav-item" onclick="switchTab('auditor.html')"><i class="fas fa-magnifying-glass-chart mr-3"></i> Auditor XML</div>
+            <div class="nav-item" onclick="switchTab('extrato simples.html')"><i class="fas fa-file-invoice mr-3"></i> Extrator PGDAS</div>
+            <div class="nav-item" onclick="switchTab('modulo_retificacao.html')"><i class="fas fa-tools mr-3"></i> Retificações</div>
+
+            <div class="px-6 py-4 text-[9px] text-zinc-600 font-black uppercase">Anexos ST (SP/Fed)</div>
+            <div class="nav-item" onclick="openModal('auto pecas.html')">Autopeças</div>
+            <div class="nav-item" onclick="openModal('bebidas alcolicas exceto cerveja e chope.html')">Bebidas Alcoólicas</div>
+            <div class="nav-item" onclick="openModal('Produtos alimenticios.html')">Alimentícios</div>
+            <div class="nav-item" onclick="openModal('Perfumaria e higiene pessoal.html')">Perfumaria</div>
+            <div class="nav-item" onclick="openModal('Materiais eletricos.html')">Mat. Elétricos</div>
+            <div class="nav-item" onclick="openModal('ferramenta.html')">Ferramentas</div>
+            <div class="nav-item" onclick="openModal('Artigos de papelaria.html')">Papelaria</div>
+        </nav>
+    </aside>
+
+    <main class="main-view" id="main-content">
+        
+        <div id="tab-home" class="p-10">
+            <h2 class="text-3xl font-black italic mb-8 uppercase">Base <span class="text-orange-500">Legal</span> & Compliance</h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div>
+                    <h3 class="text-xs font-black text-orange-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 bg-orange-500 rounded-full"></span> Legislação Estadual (SP)
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="law-card">
+                            <h4 class="text-sm font-bold text-white mb-2 uppercase">Autopeças - Portaria SRE 16/2023</h4>
+                            <p class="text-[10px] text-zinc-500 leading-relaxed mb-4">Regras de ICMS ST para componentes automotivos e integração veicular.</p>
+                            <button onclick="openModal('auto pecas.html')" class="text-[10px] font-black text-orange-500 uppercase">Ver na Íntegra <i class="fas fa-external-link-alt ml-1"></i></button>
+                        </div>
+                        <div class="law-card">
+                            <h4 class="text-sm font-bold text-white mb-2 uppercase">Bebidas - Portaria SRE 29/2025</h4>
+                            <p class="text-[10px] text-zinc-500 leading-relaxed mb-4">Regramento para bebidas alcoólicas e exclusões previstas para 2026.</p>
+                            <button onclick="openModal('bebidas alcolicas exceto cerveja e chope.html')" class="text-[10px] font-black text-orange-500 uppercase">Ver na Íntegra <i class="fas fa-external-link-alt ml-1"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-black text-blue-500 uppercase mb-4 tracking-widest flex items-center gap-2">
+                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span> Legislação Federal (PIS/COFINS)
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="law-card">
+                            <h4 class="text-sm font-bold text-white mb-2 uppercase">PIS/COFINS Monofásico</h4>
+                            <p class="text-[10px] text-zinc-500 leading-relaxed mb-4">Incidência monofásica para higiene, veículos e bebidas frias.</p>
+                            <button onclick="openModal('pis e cofins.html')" class="text-[10px] font-black text-blue-500 uppercase">Ver na Íntegra <i class="fas fa-external-link-alt ml-1"></i></button>
+                        </div>
+                        <div class="law-card">
+                            <h4 class="text-sm font-bold text-white mb-2 uppercase">Simples Nacional - LC 123/06</h4>
+                            <p class="text-[10px] text-zinc-500 leading-relaxed mb-4">Base para segregação de receitas e cálculo de alíquotas efetivas.</p>
+                            <button onclick="openModal('baselegal.html')" class="text-[10px] font-black text-blue-500 uppercase">Ver na Íntegra <i class="fas fa-external-link-alt ml-1"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-content" class="hidden h-full">
+            <iframe id="content-frame" src=""></iframe>
+        </div>
+    </main>
+
+    <div id="modal-view" class="modal">
+        <button onclick="closeModal()" class="absolute top-6 right-10 text-white text-3xl hover:text-orange-500 transition z-[1100]"><i class="fas fa-times-circle"></i></button>
+        <div class="modal-content">
+            <iframe id="modal-frame" src=""></iframe>
+        </div>
     </div>
+
+    <script>
+        function switchTab(file) {
+            const home = document.getElementById('tab-home');
+            const content = document.getElementById('tab-content');
+            const frame = document.getElementById('content-frame');
+
+            if (file === 'home') {
+                home.classList.remove('hidden');
+                content.classList.add('hidden');
+            } else {
+                home.classList.add('hidden');
+                content.classList.remove('hidden');
+                frame.src = file;
+            }
+        }
+
+        function openModal(file) {
+            const modal = document.getElementById('modal-view');
+            const frame = document.getElementById('modal-frame');
+            frame.src = file;
+            modal.style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-view').style.display = 'none';
+            document.getElementById('modal-frame').src = '';
+        }
+    </script>
 </body>
 </html>
