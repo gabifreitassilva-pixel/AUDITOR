@@ -36,8 +36,9 @@
     </style>
 </head>
 <body>
+
     <aside class="sidebar">
-        <div class="p-8 border-b border-zinc-900 mb-2">
+        <div class="p-8 border-b border-zinc-900 mb-2 text-center">
             <h1 class="text-2xl font-black italic tracking-tighter text-white">FISCAL<span class="text-[#f97316]">AUDIT</span></h1>
             <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-[0.3em]">V7.2 Integrated System</p>
         </div>
@@ -45,9 +46,11 @@
             <div class="section-title">Ferramentas de Auditoria</div>
             <div class="nav-link active" onclick="loadModule('auditoria', this)"><i class="fas fa-bolt"></i> Nova Auditoria XML</div>
             <div class="nav-link" onclick="loadModule('extrato simples.html', this)"><i class="fas fa-file-invoice"></i> Extrator PGDAS-D</div>
+            
             <div class="section-title">Ações do Sistema</div>
             <div class="nav-link" onclick="window.gravarAuditoria()"><i class="fas fa-save"></i> Gravar Auditoria</div>
             <div class="nav-link" onclick="loadModule('histórico.html', this)"><i class="fas fa-database"></i> Histórico Global</div>
+            
             <div class="section-title">Base Legal Estadual (SP)</div>
             <div class="nav-link flex justify-between" onclick="toggleMenu('menu-sp')"><span><i class="fas fa-box text-[#f97316]"></i> Anexos ICMS-ST</span><i class="fas fa-chevron-down ml-auto text-[8px]"></i></div>
             <div id="menu-sp" class="expand-content">
@@ -57,13 +60,14 @@
             </div>
         </nav>
     </aside>
+
     <main id="dynamic-content"></main>
 
     <script>
         const MONTHS = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
         let xmlList = [];
-        // Variável GLOBAL para armazenar o resultado da auditoria atual para gravação
         let auditResults = { empresa: '', cnpj: '', periodo: '', valor: 0, itens: 0 };
+        let exportData = []; // Variável para armazenar dados do Excel
 
         function loadModule(target, element) {
             const container = document.getElementById('dynamic-content');
@@ -81,50 +85,24 @@
                     <header class="flex justify-between items-center mb-10">
                         <div class="flex items-center gap-4">
                             <div class="bg-orange-600 p-3 rounded-xl text-black"><i class="fas fa-file-invoice-dollar text-2xl"></i></div>
-                            <div>
-                                <h2 class="text-2xl font-black tracking-tighter uppercase italic text-white">Auditor <span class="text-[#f97316]">Fiscal</span> Total</h2>
-                                <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.3em]">IA de NCM e Auditoria Reversa Excel</p>
-                            </div>
+                            <div><h2 class="text-2xl font-black italic text-white">Auditor <span class="text-[#f97316]">Fiscal</span> Total</h2><p class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.3em]">IA de NCM e Auditoria Reversa Excel</p></div>
                         </div>
-                        <div class="text-right">
-                            <span id="header-empresa" class="block font-black text-[#f97316] text-xl italic uppercase">Aguardando Dados</span>
-                            <p id="header-regime-mes" class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest text-right">Regime: -- | Mês: --</p>
-                        </div>
+                        <div class="text-right"><span id="header-empresa" class="block font-black text-[#f97316] text-xl italic uppercase">Aguardando Dados</span><p id="header-regime-mes" class="text-[9px] font-bold text-zinc-600 uppercase tracking-widest text-right">Regime: -- | Mês: --</p></div>
                     </header>
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                        <div class="dashboard-card p-6 orange-border">
-                            <h4 class="text-[10px] font-black uppercase text-[#f97316] mb-6 flex items-center gap-2"><i class="fas fa-id-card"></i> Dados Identificados</h4>
-                            <div class="space-y-4">
-                                <div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">Empresa</label><input type="text" id="disp-empresa" readonly></div>
-                                <div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">Regime Tributário</label><input type="text" id="disp-regime" readonly></div>
-                                <div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">CNPJ</label><input type="text" id="disp-cnpj" readonly></div>
-                                <div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">Períodos</label><input type="text" id="disp-periodo" readonly></div>
-                            </div>
-                        </div>
-                        <div class="dashboard-card p-6 orange-border flex flex-col">
-                            <h4 class="text-[10px] font-black uppercase text-[#f97316] mb-4 flex items-center gap-2"><i class="fas fa-folder-open"></i> Importar Notas (XML)</h4>
-                            <div class="flex-1 border-2 border-dashed border-zinc-900 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900/30 transition-all mb-4" onclick="document.getElementById('xml-input').click()">
-                                <i class="fas fa-cloud-arrow-up text-3xl text-zinc-800 mb-4"></i>
-                                <p id="upload-label" class="text-[10px] text-zinc-600 font-bold uppercase text-center px-4">Selecione Arquivos SAT/NFe</p>
-                                <input type="file" id="xml-input" multiple accept=".xml" class="hidden" onchange="window.handleFiles(this.files)">
-                            </div>
-                            <button id="btn-iniciar" onclick="window.processarAuditoria()" class="btn-action btn-gray" disabled><i class="fas fa-bolt"></i> Iniciar Auditoria</button>
-                        </div>
-                        <div class="dashboard-card p-6 orange-border">
-                            <h4 class="text-[10px] font-black uppercase text-[#f97316] mb-6 flex items-center gap-2"><i class="fas fa-cog"></i> Gerenciamento</h4>
-                            <div class="space-y-3">
-                                <button id="btn-exportar" class="btn-action btn-gray" onclick="window.exportarExcel()" disabled><i class="fas fa-file-excel"></i> Exportar Excel</button>
-                                <button class="btn-action btn-orange"><i class="fas fa-file-import"></i> Importar Auditoria Excel</button>
-                                <button onclick="loadModule('auditoria', document.querySelector('.nav-link.active'))" class="btn-action btn-outline mt-2"><i class="fas fa-broom"></i> Limpar Análise</button>
-                            </div>
-                        </div>
+                        <div class="dashboard-card p-6 orange-border"><h4 class="text-[10px] font-black uppercase text-[#f97316] mb-6 flex items-center gap-2"><i class="fas fa-id-card"></i> Dados Identificados</h4><div class="space-y-4"><div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">Empresa</label><input type="text" id="disp-empresa" readonly></div><div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">Regime Tributário</label><input type="text" id="disp-regime" readonly></div><div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">CNPJ</label><input type="text" id="disp-cnpj" readonly></div><div><label class="text-[9px] text-zinc-600 font-bold uppercase ml-1">Períodos</label><input type="text" id="disp-periodo" readonly></div></div></div>
+                        <div class="dashboard-card p-6 orange-border flex flex-col"><h4 class="text-[10px] font-black uppercase text-[#f97316] mb-4 flex items-center gap-2"><i class="fas fa-folder-open"></i> Importar Notas (XML)</h4><div class="flex-1 border-2 border-dashed border-zinc-900 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-900/30 transition-all mb-4" onclick="document.getElementById('xml-input').click()"><i class="fas fa-cloud-arrow-up text-3xl text-zinc-800 mb-4"></i><p id="upload-label" class="text-[10px] text-zinc-600 font-bold uppercase text-center px-4">Selecione Arquivos SAT/NFe</p><input type="file" id="xml-input" multiple accept=".xml" class="hidden" onchange="window.handleFiles(this.files)"></div><button id="btn-iniciar" onclick="window.processarAuditoria()" class="btn-action btn-gray" disabled><i class="fas fa-bolt"></i> Iniciar Auditoria</button></div>
+                        <div class="dashboard-card p-6 orange-border"><h4 class="text-[10px] font-black uppercase text-[#f97316] mb-6 flex items-center gap-2"><i class="fas fa-cog"></i> Gerenciamento</h4><div class="space-y-3"><button id="btn-exportar" class="btn-action btn-gray" onclick="window.exportarExcel()" disabled><i class="fas fa-file-excel"></i> Exportar Excel</button><button class="btn-action btn-orange"><i class="fas fa-file-import"></i> Importar Auditoria Excel</button><button onclick="window.loadModule('auditoria', document.querySelector('.nav-link.active'))" class="btn-action btn-outline mt-2"><i class="fas fa-broom"></i> Limpar Análise</button></div></div>
                     </div>
+
                     <div class="grid grid-cols-4 gap-6 mb-8">
                         <div class="dashboard-card p-5 border-l-4 border-orange-500"><p class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Lote Notas</p><h3 id="kpi-notas" class="text-3xl font-black mt-1">0</h3></div>
                         <div class="dashboard-card p-5 border-l-4 border-orange-500"><p class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest">Itens Auditados</p><h3 id="kpi-itens" class="text-3xl font-black mt-1">0</h3></div>
                         <div class="dashboard-card p-5 border-l-4 border-red-600"><p class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest text-red-600">Inconsistências</p><h3 id="kpi-erros" class="text-3xl font-black text-red-600 mt-1">0%</h3></div>
                         <div class="dashboard-card p-5 border-l-4 border-green-500"><p class="text-[9px] text-zinc-500 uppercase font-bold tracking-widest text-green-600">Total Recuperável</p><h3 id="kpi-valor" class="text-3xl font-black text-green-500 mt-1">R$ 0,00</h3></div>
                     </div>
+
                     <div class="dashboard-card overflow-hidden">
                         <div class="p-4 bg-zinc-900/20 border-b border-zinc-900"><h3 class="text-[10px] font-black uppercase text-zinc-400 tracking-[0.2em]">Relatório: Original vs Sugestão do Auditor</h3></div>
                         <div class="overflow-x-auto max-h-96">
@@ -173,7 +151,6 @@
             document.getElementById('disp-periodo').value = mesAno;
             document.getElementById('header-regime-mes').innerText = `Regime: ${regime} | Mês: ${mesAno}`;
             
-            // PREENCHE OS DADOS GLOBAIS PARA O BOTÃO GRAVAR
             auditResults.empresa = nome;
             auditResults.cnpj = cnpjFormatado;
             auditResults.periodo = mesAno;
@@ -182,6 +159,7 @@
         window.processarAuditoria = async function() {
             const tbody = document.getElementById('tabela-body');
             tbody.innerHTML = "";
+            exportData = []; // Limpa dados anteriores
             let recoveryTotal = 0, totalItens = 0, errorCount = 0;
 
             for (let file of xmlList) {
@@ -197,28 +175,32 @@
                     const xProd = det.getElementsByTagName("xProd")[0]?.textContent || "PRODUTO";
                     const ncm = det.getElementsByTagName("NCM")[0]?.textContent || "00000000";
                     const vProd = parseFloat(det.getElementsByTagName("vProd")[0]?.textContent || 0);
+                    
                     const pisCST = det.getElementsByTagName("PIS")[0]?.getElementsByTagName("CST")[0]?.textContent || "01";
-                    const icmsCSOSN = det.getElementsByTagName("ICMS")[0]?.getElementsByTagName("CSOSN")[0]?.textContent || det.getElementsByTagName("ICMS")[0]?.getElementsByTagName("CST")[0]?.textContent || "102";
+                    const icmsCSOSN = det.getElementsByTagName("ICMS")[0]?.getElementsByTagName("CSOSN")[0]?.textContent || 
+                                      det.getElementsByTagName("ICMS")[0]?.getElementsByTagName("CST")[0]?.textContent || "102";
 
                     let status = "CONFORME", corStatus = "text-zinc-600", valRec = 0;
                     let sug = { ncm: "", pis: "", icms: "" };
 
-                    // REGRA DE EXEMPLO: Monofásico identificado (Bebidas/Autopeças/Sorvete)
+                    // MOTOR DE AUDITORIA (Cálculo e Sugestão)
                     const isMono = ["2105", "2202", "2203", "8708", "3304"].some(p => ncm.startsWith(p));
                     if (isMono && (pisCST === "01" || pisCST === "49")) {
                         status = "NCM MONOFÁSICO"; corStatus = "text-red-500";
                         sug.pis = "05"; sug.icms = "500";
                         valRec = vProd * 0.0198; errorCount++;
-                    } else if (ncm === "00000000") {
+                    } else if (ncm === "00000000" || ncm.length < 8) {
                         status = "NCM ZERADO"; corStatus = "text-red-500";
                         sug.ncm = "2105.00.10"; errorCount++;
                     }
 
                     recoveryTotal += valRec;
+
+                    // Injeta na Tabela do Print 8
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-white/5 transition border-b border-zinc-900/50";
                     tr.innerHTML = `
-                        <td class="p-4"><div class="font-bold text-zinc-100 uppercase text-[10px]">${xProd}</div><div class="text-[8px] text-orange-500 uppercase">DOC: ${docId}</div></td>
+                        <td class="p-4"><div class="font-bold text-zinc-100 uppercase text-[10px]">${xProd}</div><div class="text-[8px] text-orange-500">DOC: ${docId}</div></td>
                         <td class="p-4 text-zinc-500 font-mono">O: ${ncm}</td>
                         <td class="p-4 text-center leading-tight"><span class="badge-tax bg-pis-cof">PIS:${pisCST}</span><br><span class="badge-tax bg-icms text-[7px]">ICMS:${icmsCSOSN}</span></td>
                         <td class="p-4 text-center leading-tight">
@@ -229,18 +211,37 @@
                         <td class="p-4 text-center"><div class="font-black ${corStatus} uppercase text-[9px]">${status}</div><div class="text-[8px] text-zinc-700">${mesRef}</div></td>
                         <td class="p-4 text-right font-black text-green-500">${valRec > 0 ? 'R$ ' + valRec.toFixed(2) : '-'}</td>`;
                     tbody.appendChild(tr);
+
+                    // Prepara dados para o modelo de relatório solicitado
+                    exportData.push({ Empresa: auditResults.empresa, CNPJ: auditResults.cnpj, Mes: mesRef, Nota: docId, Produto: xProd, NCM: ncm, PIS_O: pisCST, ICMS_O: icmsCSOSN, PIS_S: sug.pis, ICMS_S: sug.icms, Status: status, Credito: valRec.toFixed(2) });
                 });
             }
+
+            // ATUALIZA KPIs (Resolvendo sua reclamação de que não mostravam)
             document.getElementById('kpi-itens').innerText = totalItens;
             document.getElementById('kpi-erros').innerText = totalItens > 0 ? ((errorCount/totalItens)*100).toFixed(1) + "%" : "0%";
             document.getElementById('kpi-valor').innerText = recoveryTotal.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
             
-            // ATUALIZA RESULTADOS PARA GRAVAÇÃO
             auditResults.valor = recoveryTotal;
             auditResults.itens = totalItens;
             
-            document.getElementById('btn-exportar').disabled = false;
-            document.getElementById('btn-exportar').className = "btn-action btn-orange";
+            // Habilita o botão de exportar
+            const btnExp = document.getElementById('btn-exportar');
+            btnExp.disabled = false; btnExp.className = "btn-action btn-orange";
+        };
+
+        window.exportarExcel = function() {
+            if(exportData.length === 0) return;
+            // Modelo de relatório confrontado conforme solicitado
+            let csv = "\ufeffEmpresa;CNPJ;Mes;Nota;Produto;NCM;PIS_O;ICMS_O;PIS_SUG;ICMS_SUG;Status;Credito\n";
+            exportData.forEach(d => { 
+                csv += `${d.Empresa};${d.CNPJ};${d.Mes};${d.Nota};${d.Produto};${d.NCM};${d.PIS_O};${d.ICMS_O};${d.PIS_S};${d.ICMS_S};${d.Status};${d.Credito}\n`; 
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `AUDITORIA_${auditResults.empresa.replace(/\s+/g, '_')}.csv`;
+            link.click();
         };
 
         window.gravarAuditoria = function() {
@@ -248,15 +249,7 @@
                 alert("Realize uma auditoria antes de gravar!");
                 return;
             }
-            const dados = {
-                empresa: auditResults.empresa,
-                cnpj: auditResults.cnpj,
-                mes: auditResults.periodo,
-                valor: auditResults.valor,
-                volume: auditResults.itens,
-                data: new Date().toISOString()
-            };
-            // Salva no LocalStorage para o Historico Global ler
+            const dados = { empresa: auditResults.empresa, cnpj: auditResults.cnpj, mes: auditResults.periodo, valor: auditResults.valor, volume: auditResults.itens, data: new Date().toISOString() };
             let historico = JSON.parse(localStorage.getItem('auditoria_salva')) || [];
             historico.push(dados);
             localStorage.setItem('auditoria_salva', JSON.stringify(historico));
