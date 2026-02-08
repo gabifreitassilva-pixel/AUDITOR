@@ -16,6 +16,7 @@
         .sub-item { padding: 8px 45px; font-size: 10px; color: #555; cursor: pointer; display: block; border-bottom: 1px solid #0a0a0a; }
         .sub-item:hover { color: #f97316; background: #0a0a0a; }
         .main-content { flex: 1; position: relative; }
+        /* Permissões de Iframe para garantir funcionamento do botão */
         iframe { width: 100%; height: 100%; border: none; }
     </style>
 </head>
@@ -23,7 +24,7 @@
     <aside class="sidebar">
         <div class="p-8 border-b border-zinc-900 mb-4 text-center">
             <h1 class="text-2xl font-black italic text-orange-500">FISCAL<span class="text-white">AUDIT</span></h1>
-            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-1">v7.2 Integrated Platform</p>
+            <p class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest mt-1 text-center">v7.2 Integrated Platform</p>
         </div>
         <nav>
             <div class="section-title">Core Auditoria</div>
@@ -33,14 +34,24 @@
             <div class="nav-link" onclick="loadPage('histórico.html', this)"><i class="fas fa-database"></i> Histórico Global</div>
 
             <div class="section-title">Base Legal Estadual (SP)</div>
-            <div class="nav-link" onclick="toggleMenu('menu-sp')"><i class="fas fa-landmark text-orange-500"></i> Leis Estaduais <i class="fas fa-chevron-down ml-auto text-[8px]"></i></div>
+            <div class="nav-link" onclick="toggleMenu('menu-sp')"><i class="fas fa-landmark text-orange-500"></i> Anexos ICMS-ST <i class="fas fa-chevron-down ml-auto text-[8px]"></i></div>
             <div id="menu-sp" class="expand-content">
                 <div class="sub-item" onclick="loadPage('auto pecas.html')">Anexo I: Autopeças</div>
                 <div class="sub-item" onclick="loadPage('bebidas alcolicas exceto cerveja e chope.html')">Anexo III: Bebidas Alcoólicas</div>
                 <div class="sub-item" onclick="loadPage('cerveja chopes refrigerante agua e outras bebidas.html')">Anexo IV: Bebidas Frias/Águas</div>
+                <div class="sub-item" onclick="loadPage('cigarros e outros produtos derivados do fumo.html')">Anexo V: Fumo</div>
+                <div class="sub-item" onclick="loadPage('cimentos.html')">Anexo VI: Cimentos</div>
                 <div class="sub-item" onclick="loadPage('Produtos alimenticios.html')">Anexo XII: Alimentos</div>
                 <div class="sub-item" onclick="loadPage('Perfumaria e higiene pessoal.html')">Anexo XIII: Perfumaria/Higiene</div>
+                <div class="sub-item" onclick="loadPage('Eletronicos e eletrodomesticosl.html')">Anexo XV: Eletrônicos</div>
                 <div class="sub-item" onclick="loadPage('base reduzida.html')">Anexo II: B.C. Reduzida SP</div>
+            </div>
+
+            <div class="section-title">Base Legal Federal</div>
+            <div class="nav-link" onclick="toggleMenu('menu-fed')"><i class="fas fa-gavel text-blue-500"></i> PIS/COFINS <i class="fas fa-chevron-down ml-auto text-[8px]"></i></div>
+            <div id="menu-fed" class="expand-content">
+                <div class="sub-item" onclick="loadPage('pis e cofins.html')">Tabela Mestra Federal</div>
+                <div class="sub-item" onclick="loadPage('baselegal.html')">Legislação Federal</div>
             </div>
         </nav>
     </aside>
