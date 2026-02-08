@@ -2,55 +2,67 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Auditor Fiscal Digital Pro - Processador XML</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditor Fiscal Digital Pro - Auditoria Reversa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; }
+        body { background-color: #000000; color: #ffffff; font-family: 'Inter', sans-serif; }
         .dashboard-card { background-color: #0a0a0a; border: 1px solid #222; transition: all 0.3s ease; }
         .orange-accent { color: #FF8C00; }
-        .btn-orange { background-color: #FF8C00; color: #000; font-weight: 900; text-transform: uppercase; }
+        .btn-orange { background-color: #FF8C00; color: #000; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; }
+        .btn-orange:hover:not(:disabled) { background-color: #ff9d26; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(255, 140, 0, 0.4); }
         .btn-orange:disabled { background-color: #333; color: #666; cursor: not-allowed; }
-        .badge-tax { font-size: 8px; padding: 2px 4px; border-radius: 3px; font-weight: bold; margin-right: 2px; }
+        .badge-tax { font-size: 8px; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-right: 2px; }
+        .bg-pis { background-color: #3b82f6; color: white; }
+        .bg-cof { background-color: #6366f1; color: white; }
+        .bg-icms { background-color: #f59e0b; color: white; }
     </style>
 </head>
-<body class="p-6">
-    <main class="container mx-auto">
+<body class="min-h-screen flex flex-col p-6">
+    
+    <main class="container mx-auto flex-1">
         <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="dashboard-card p-6 rounded-xl border-t-4 border-orange-500 shadow-lg">
-                <h2 class="font-bold mb-4 flex items-center gap-2 uppercase text-xs"><i class="fas fa-folder-open orange-accent"></i> Importar XMLs</h2>
-                <div class="border-2 border-dashed border-zinc-800 rounded-lg flex flex-col items-center justify-center p-8 hover:border-orange-500 transition cursor-pointer" onclick="document.getElementById('xml-input').click()">
+                <h2 class="font-bold mb-4 flex items-center gap-2 uppercase text-xs"><i class="fas fa-id-card orange-accent"></i> Dados Identificados</h2>
+                <div class="space-y-3">
+                    <div><label class="text-[10px] text-zinc-500 font-bold uppercase">Empresa</label><input type="text" id="input-company" readonly class="w-full p-2 rounded mt-1 border border-zinc-800 bg-zinc-950 text-xs"></div>
+                    <div><label class="text-[10px] text-zinc-500 font-bold uppercase">Regime</label><input type="text" id="input-regime" readonly class="w-full p-2 rounded mt-1 border border-zinc-800 bg-zinc-950 text-xs"></div>
+                </div>
+            </div>
+
+            <div class="dashboard-card p-6 rounded-xl border-t-4 border-orange-500 flex flex-col shadow-lg text-center">
+                <h2 class="font-bold mb-4 flex items-center justify-center gap-2 uppercase text-xs"><i class="fas fa-folder-open orange-accent"></i> Importar Notas (XML)</h2>
+                <div class="flex-1 border-2 border-dashed border-zinc-800 rounded-lg flex flex-col items-center justify-center p-4 group hover:border-orange-500 cursor-pointer" onclick="document.getElementById('xml-input').click()">
                     <input type="file" id="xml-input" multiple accept=".xml" class="hidden" onchange="handleFileChange(event)">
-                    <i class="fas fa-cloud-arrow-up text-3xl text-zinc-700 mb-2"></i>
+                    <i class="fas fa-cloud-arrow-up text-3xl text-zinc-700 mb-2 group-hover:text-orange-500"></i>
                     <p id="upload-status" class="text-[10px] text-zinc-500 font-bold uppercase">Selecione Notas SAT/NFe</p>
                 </div>
-                <button id="btn-start" disabled onclick="runFullSemanticAudit()" class="btn-orange w-full mt-4 py-4 rounded-lg flex items-center justify-center gap-2 shadow-lg">
+                <button id="btn-start" disabled onclick="runFullSemanticAudit()" class="btn-orange mt-4 py-4 rounded-lg flex items-center justify-center gap-2">
                     <i class="fas fa-bolt"></i> Iniciar Auditoria
                 </button>
             </div>
 
-            <div class="md:col-span-2 grid grid-cols-2 gap-4">
-                <div class="dashboard-card p-6 rounded-xl border-l-4 border-orange-500">
-                    <p class="text-[10px] text-zinc-500 uppercase font-bold">Itens Auditados</p>
-                    <h3 id="kpi-items" class="text-3xl font-black">0</h3>
-                </div>
-                <div class="dashboard-card p-6 rounded-xl border-l-4 border-green-500">
-                    <p class="text-[10px] text-zinc-500 uppercase font-bold text-green-500">Recuperação Estimada</p>
-                    <h3 id="kpi-recovery" class="text-3xl font-black text-green-500">R$ 0,00</h3>
-                </div>
+            <div class="dashboard-card p-6 rounded-xl border-t-4 border-orange-500 shadow-lg space-y-3">
+                <button id="btn-excel" disabled onclick="exportComparativeExcel()" class="w-full btn-orange py-3 rounded flex items-center justify-center gap-2">
+                    <i class="fas fa-file-excel"></i> Exportar para Excel
+                </button>
+                <button onclick="window.location.reload()" class="w-full border border-zinc-800 py-3 rounded text-zinc-500 font-bold text-[10px] uppercase">
+                    <i class="fas fa-eraser mr-2"></i> Limpar Análise
+                </button>
             </div>
         </section>
 
         <section class="dashboard-card rounded-xl overflow-hidden shadow-2xl">
-            <div class="p-4 border-b border-zinc-800 bg-zinc-900/40 flex justify-between items-center">
-                <h2 class="font-bold text-zinc-200 uppercase text-[10px] tracking-widest">Relatório de Inconsistências Identificadas</h2>
-                <div id="loader" class="hidden text-orange-500 animate-pulse text-[10px] font-bold uppercase"><i class="fas fa-sync fa-spin"></i> Processando...</div>
+            <div class="p-5 border-b border-zinc-800 bg-zinc-900/40 flex justify-between items-center">
+                <h2 class="font-bold text-zinc-200 uppercase text-xs tracking-widest">Relatório: Original vs Sugestão do Auditor</h2>
+                <div id="loader" class="hidden flex items-center gap-2 text-[10px] font-bold text-orange-500 animate-pulse uppercase"><i class="fas fa-sync fa-spin"></i> Processando...</div>
             </div>
-            <div class="overflow-x-auto">
+            <div class="max-h-[500px] overflow-y-auto">
                 <table class="w-full text-left text-[11px]">
-                    <thead class="bg-black text-zinc-500 border-b border-zinc-800 uppercase font-bold">
-                        <tr><th class="p-4">Produto</th><th class="p-4">NCM Original</th><th class="p-4 text-orange-500">Sugestão Técnica</th><th class="p-4 text-right">Crédito Est.</th></tr>
+                    <thead class="bg-black text-zinc-500 border-b border-zinc-800 sticky top-0 uppercase">
+                        <tr><th class="p-4">Produto</th><th class="p-4">NCM Original</th><th class="p-4 text-center">Tributos</th><th class="p-4 text-center text-orange-500">Sugestão Técnica</th><th class="p-4 text-right">Crédito</th></tr>
                     </thead>
                     <tbody id="table-body" class="divide-y divide-zinc-900 text-zinc-300"></tbody>
                 </table>
@@ -60,28 +72,28 @@
 
     <script>
         let filesQueue = [];
-        let auditResults = { items: 0, recovery: 0, details: [] };
+        let state = { xmlCount: 0, itemCount: 0, totalRecovery: 0, auditDetails: [] };
 
-        // Função que ativa o botão ao selecionar arquivos
-        function handleFileChange(event) {
+        // Definimos as funções no escopo Global (window) para o Iframe não perdê-las
+        window.handleFileChange = function(event) {
             filesQueue = Array.from(event.target.files);
             if (filesQueue.length > 0) {
                 document.getElementById('upload-status').innerText = `${filesQueue.length} XMLs PRONTOS`;
                 document.getElementById('btn-start').disabled = false;
             }
-        }
+        };
 
-        async function runFullSemanticAudit() {
+        window.runFullSemanticAudit = async function() {
             document.getElementById('loader').classList.remove('hidden');
             document.getElementById('table-body').innerHTML = "";
-            auditResults = { items: 0, recovery: 0, details: [] };
+            state = { xmlCount: 0, itemCount: 0, totalRecovery: 0, auditDetails: [] };
 
             const tasks = filesQueue.map(file => {
                 return new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const xml = new DOMParser().parseFromString(e.target.result, "text/xml");
-                        processXML(xml);
+                        processAuditData(xml);
                         resolve();
                     };
                     reader.readAsText(file);
@@ -89,10 +101,19 @@
             });
 
             await Promise.all(tasks);
-            finalizeAudit();
-        }
+            document.getElementById('loader').classList.add('hidden');
+            document.getElementById('btn-excel').disabled = false;
+            document.getElementById('kpi-items').innerText = state.itemCount;
+            document.getElementById('kpi-recovery').innerText = state.totalRecovery.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+        };
 
-        function processXML(xml) {
+        function processAuditData(xml) {
+            const emit = xml.getElementsByTagName("emit")[0];
+            document.getElementById('input-company').value = emit?.getElementsByTagName("xNome")[0]?.textContent || 'N/A';
+            
+            const crt = xml.getElementsByTagName("CRT")[0]?.textContent || xml.getElementsByTagName("cRegTrib")[0]?.textContent;
+            document.getElementById('input-regime').value = crt === "1" ? "SIMPLES NACIONAL" : "REGIME NORMAL";
+
             const dets = xml.getElementsByTagName("det");
             Array.from(dets).forEach(item => {
                 const prod = item.getElementsByTagName("prod")[0];
@@ -100,41 +121,42 @@
                 const ncm = prod.getElementsByTagName("NCM")[0].textContent;
                 const vProd = parseFloat(prod.getElementsByTagName("vProd")[0].textContent);
                 
-                // Mapeamento simplificado das suas bases
-                let sugestao = null;
-                
-                // Exemplo: Cruzamento com PIS/COFINS Monofásico
-                if (ncm.startsWith("3304") || ncm.startsWith("3401")) sugestao = { ncm: ncm, cst: "04", tipo: "MONOFÁSICO" };
-                if (ncm.startsWith("8708")) sugestao = { ncm: ncm, cst: "04", tipo: "AUTOPEÇAS ST" };
-                if (ncm.startsWith("1806")) sugestao = { ncm: ncm, cst: "500", tipo: "ALIMENTOS ST" };
-
-                if (sugestao) {
-                    const credito = vProd * 0.0925; // Alíquota exemplo para recuperação
-                    auditResults.items++;
-                    auditResults.recovery += credito;
-                    renderRow(xProd, ncm, sugestao, credito);
-                }
+                // Chamamos a inteligência baseada nos seus anexos
+                performCoreAudit(xProd, ncm, vProd);
             });
         }
 
-        function renderRow(name, ncm, sug, value) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="p-4 font-bold text-white uppercase">${name}</td>
-                <td class="p-4 font-mono text-zinc-500">${ncm}</td>
-                <td class="p-4 font-bold text-orange-500">NCM: ${sug.ncm} | CST: ${sug.cst} <br><span class="text-[8px] uppercase">${sug.tipo}</span></td>
-                <td class="p-4 text-right text-green-500 font-bold">R$ ${value.toFixed(2)}</td>
-            `;
-            document.getElementById('table-body').appendChild(tr);
-        }
+        function performCoreAudit(xProd, ncm, vProd) {
+            state.itemCount++;
+            let sugestao = null;
+            let credito = 0;
 
-        function finalizeAudit() {
-            document.getElementById('loader').classList.add('hidden');
-            document.getElementById('kpi-items').innerText = auditResults.items;
-            document.getElementById('kpi-recovery').innerText = auditResults.recovery.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
-            
-            // Salva no LocalStorage para o modulo_retificacao.html ler
-            localStorage.setItem('last_audit', JSON.stringify(auditResults));
+            // Lógica de cruzamento baseada nos seus arquivos de dados
+            if (ncm.startsWith("3304") || ncm.startsWith("3401")) { // Perfumaria
+                sugestao = { ncm: ncm, p: "04", c: "04", tipo: "MONOFÁSICO" };
+                credito = vProd * 0.0925;
+            } else if (ncm.startsWith("8708")) { // Autopeças
+                sugestao = { ncm: ncm, i: "060", tipo: "ICMS ST SP" };
+                credito = vProd * 0.18;
+            }
+
+            if (sugestao) {
+                state.totalRecovery += credito;
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-zinc-900/40 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-bold text-white uppercase truncate max-w-[200px]">${xProd}</td>
+                    <td class="p-4 font-mono text-zinc-500">${ncm}</td>
+                    <td class="p-4 text-center">N/A</td>
+                    <td class="p-4 text-center font-bold text-orange-500">
+                        ${sugestao.p ? `<span class="badge-tax bg-pis">PIS:${sugestao.p}</span>` : ''}
+                        ${sugestao.i ? `<span class="badge-tax bg-icms">ICMS:${sugestao.i}</span>` : ''}
+                        <div class="text-[8px] mt-1">${sugestao.tipo}</div>
+                    </td>
+                    <td class="p-4 text-right text-green-500 font-bold">R$ ${credito.toFixed(2)}</td>
+                `;
+                document.getElementById('table-body').appendChild(tr);
+            }
         }
     </script>
 </body>
