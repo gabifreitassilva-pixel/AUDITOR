@@ -1,469 +1,63 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#1a1a1a">
-    <title>FISCO CAPITAL - Gestão de Ativos</title>
-    <link rel="manifest" href="manifest.json">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            black: '#0f0f0f', dark: '#1a1a1a', gray: '#2a2a2a',
-                            orange: '#f97316', orangeHover: '#ea580c', text: '#f3f4f6',
-                            muted: '#9ca3af', success: '#10b981', danger: '#ef4444', info: '#3b82f6'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        input[type="file"]::file-selector-button {
-            background-color: #2a2a2a; color: #f97316; border: 1px solid #f97316;
-            padding: 0.25rem 0.5rem; border-radius: 0.25rem; cursor: pointer; margin-right: 10px;
-        }
-        .tab-active { border-bottom: 2px solid #f97316; color: #f97316; }
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white; color: black; }
-            .print-only { display: block !important; }
-        }
-    </style>
-</head>
-<body class="bg-brand-black text-brand-text min-h-screen pb-10">
+// Função para converter arquivo em Base64
+async function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        if (!file) resolve(null);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
 
-    <header class="bg-brand-dark border-b border-brand-gray sticky top-0 z-50 no-print">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-brand-orange/10 p-2 rounded border border-brand-orange/20">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-orange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                </div>
-                <h1 class="text-2xl font-bold tracking-tighter text-white">FISCO <span class="text-brand-orange">CAPITAL</span></h1>
-            </div>
-        </div>
-    </header>
+async function calcularSimulacao() {
+    const editId = document.getElementById('editId').value;
+    
+    // Captura de arquivos (Novos ou manter antigos se estiver editando)
+    const fileNFCompra = document.getElementById('nfCompra').files[0];
+    const fileNFVenda = document.getElementById('nfVenda').files[0];
+    const fileDecl = document.getElementById('fileDeclaracao').files[0];
 
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        <div class="tabs-nav flex gap-6 mb-8 border-b border-brand-gray text-sm font-medium overflow-x-auto no-print">
-            <button onclick="switchTab('calculadora')" id="tab-calculadora" class="pb-3 tab-active">Simulador & Cálculo</button>
-            <button onclick="switchTab('guia')" id="tab-guia" class="pb-3 text-brand-muted">Guia Fiscal & Obrigações</button>
-            <button onclick="switchTab('historico')" id="tab-historico" class="pb-3 text-brand-muted">Histórico & Backup</button>
-        </div>
+    // Se estiver editando, busca o item antigo para manter os arquivos caso não suba novos
+    let itemAntigo = editId ? historico.find(i => i.id == editId) : null;
 
-        <div id="view-calculadora" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-brand-dark p-6 rounded-lg border border-brand-gray shadow-lg relative">
-                    <div id="editModeIndicator" class="hidden absolute top-0 right-0 bg-brand-orange text-white text-xs px-3 py-1 rounded-bl-lg font-bold">EDITANDO REGISTRO</div>
-                    
-                    <form id="calcForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="hidden" id="editId">
-                        <div class="md:col-span-1">
-                            <label class="block text-xs uppercase text-brand-muted mb-1">Nome da Empresa</label>
-                            <input type="text" id="nomeEmpresa" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white">
-                        </div>
-                        <div class="md:col-span-1">
-                            <label class="block text-xs uppercase text-brand-muted mb-1">Regime Tributário</label>
-                            <select id="regimeTributario" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white font-bold">
-                                <option value="simples">Simples Nacional (15% sobre ganho)</option>
-                                <option value="presumido">Lucro Presumido (IRPJ/CSLL)</option>
-                            </select>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-xs uppercase text-brand-muted mb-1">Descrição do Bem</label>
-                            <input type="text" id="descricao" placeholder="Ex: Veículo Ford Ka 2020" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white">
-                        </div>
-                        
-                        <div class="p-4 bg-brand-black/30 border border-brand-gray rounded">
-                            <h4 class="text-brand-orange text-xs font-bold mb-3 uppercase">Aquisição (Entrada)</h4>
-                            <label class="text-[10px] text-brand-muted uppercase">Data de Compra</label>
-                            <input type="date" id="dataAquisicao" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white mb-2">
-                            <label class="text-[10px] text-brand-muted uppercase">Valor em Nota (R$)</label>
-                            <input type="text" id="valorAquisicao" oninput="mascaraMoeda(this)" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white text-right font-mono">
-                        </div>
+    const f = {
+        empresa: document.getElementById('nomeEmpresa').value,
+        regime: document.getElementById('regimeTributario').value,
+        bem: document.getElementById('descricao').value,
+        vlrAq: parseCurrency(document.getElementById('valorAquisicao').value),
+        vlrVenda: parseCurrency(document.getElementById('valorVenda').value),
+        despesas: parseCurrency(document.getElementById('despesasVenda').value),
+        dtAq: document.getElementById('dataAquisicao').value,
+        dtVenda: document.getElementById('dataVenda').value,
+        taxa: parseFloat(document.getElementById('tipoDepreciacao').value),
+        // Processamento de arquivos
+        docCompra: fileNFCompra ? await fileToBase64(fileNFCompra) : (itemAntigo ? itemAntigo.docCompra : null),
+        docVenda: fileNFVenda ? await fileToBase64(fileNFVenda) : (itemAntigo ? itemAntigo.docVenda : null),
+        docDecl: fileDecl ? await fileToBase64(fileDecl) : (itemAntigo ? itemAntigo.docDecl : null),
+        docImposto: itemAntigo ? itemAntigo.docImposto : null // Mantém o imposto já anexado
+    };
 
-                        <div class="p-4 bg-brand-black/30 border border-brand-gray rounded">
-                            <h4 class="text-brand-orange text-xs font-bold mb-3 uppercase">Venda (Saída)</h4>
-                            <label class="text-[10px] text-brand-muted uppercase">Data de Venda</label>
-                            <input type="date" id="dataVenda" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white mb-2">
-                            <label class="text-[10px] text-brand-muted uppercase">Valor de Venda (R$)</label>
-                            <input type="text" id="valorVenda" oninput="mascaraMoeda(this)" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white text-right font-mono">
-                        </div>
+    if(!f.empresa || !f.dtAq || !f.dtVenda) { alert("Preencha os campos."); return; }
 
-                        <div class="md:col-span-2 grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-xs text-brand-muted mb-1 uppercase font-bold">Taxa de Depreciação Anual</label>
-                                <select id="tipoDepreciacao" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white">
-                                    <option value="20">Veículos / Informática (20%)</option>
-                                    <option value="10">Móveis e Utensílios (10%)</option>
-                                    <option value="4">Imóveis (4%)</option>
-                                    <option value="25">Tratores / Ferramentas (25%)</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-brand-muted mb-1 uppercase">Despesas com a Venda</label>
-                                <input type="text" id="despesasVenda" oninput="mascaraMoeda(this)" placeholder="R$ 0,00" class="w-full bg-brand-black border border-brand-gray rounded p-2 text-white text-right font-mono">
-                            </div>
-                        </div>
+    const tempo = calcularDiferencaTempo(f.dtAq, f.dtVenda);
+    let depAc = ((f.vlrAq * (f.taxa/100)) / 12) * tempo.totalMeses;
+    if(depAc > f.vlrAq) depAc = f.vlrAq;
+    const vlrCont = f.vlrAq - depAc;
+    const ganho = (f.vlrVenda - f.despesas) - vlrCont;
 
-                        <div class="md:col-span-2 border-t border-brand-gray pt-4 no-print">
-                            <h3 class="text-xs font-bold text-brand-orange uppercase mb-3">Anexos Digitais (Documentação)</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div class="text-[10px]"><label>NF Compra</label><input type="file" id="nfCompra" class="w-full mt-1"></div>
-                                <div class="text-[10px]"><label>NF Venda</label><input type="file" id="nfVenda" class="w-full mt-1"></div>
-                                <div class="text-[10px]"><label>Declaração/Contrato</label><input type="file" id="fileDeclaracao" class="w-full mt-1"></div>
-                            </div>
-                        </div>
-                    </form>
-                    <div class="mt-6 flex justify-end gap-3 no-print">
-                        <button onclick="limparFormulario()" class="px-4 py-2 text-sm text-brand-muted hover:text-white">Limpar</button>
-                        <button onclick="calcularSimulacao()" id="btnAcao" class="bg-brand-orange hover:bg-brand-orangeHover text-white px-8 py-3 rounded font-black shadow-lg">CALCULAR AGORA</button>
-                    </div>
-                </div>
+    let imposto = ganho > 0 ? (f.regime === 'simples' ? ganho * 0.15 : ganho * 0.34) : 0;
+    
+    const novoItem = { 
+        ...f, 
+        id: editId ? parseInt(editId) : Date.now(), 
+        imposto, 
+        tempoStr: `${tempo.anos}a ${tempo.meses}m`, 
+        ganhoCapital: ganho > 0 ? ganho : 0,
+        code: f.regime === 'simples' ? "0507" : "IRPJ/CSLL"
+    };
 
-                <div id="areaExplicacao" class="hidden bg-brand-dark border border-brand-info/30 rounded-lg p-6 space-y-4">
-                    <h3 class="text-xl font-bold text-brand-info flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        Entenda o Cálculo
-                    </h3>
-                    <div id="passoAPasso" class="text-sm text-gray-300 leading-relaxed space-y-4">
-                        </div>
-                </div>
-            </div>
-
-            <div class="lg:col-span-1">
-                <div id="cardResultado" class="bg-brand-dark rounded-lg border border-brand-gray sticky top-24 opacity-50 pointer-events-none">
-                    <div class="bg-brand-black p-4 border-b border-brand-gray">
-                        <h2 class="font-bold text-white uppercase tracking-widest text-sm">Resumo da Apuração</h2>
-                    </div>
-                    <div class="p-6 space-y-6">
-                        <div class="flex justify-between items-end">
-                            <div>
-                                <p class="text-[10px] text-brand-muted uppercase">Tempo de Uso</p>
-                                <p id="resTempo" class="text-lg font-bold text-white">-</p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-[10px] text-brand-muted uppercase">Depreciação Acumulada</p>
-                                <p id="resDepreciacao" class="text-lg font-bold text-brand-danger">-</p>
-                            </div>
-                        </div>
-
-                        <div class="bg-brand-black p-4 rounded border border-brand-gray">
-                            <p class="text-[10px] text-brand-muted uppercase mb-1 text-center">Valor Contábil Atual</p>
-                            <p id="resValorContabil" class="text-2xl font-black text-white text-center">-</p>
-                        </div>
-
-                        <div class="pt-4 border-t border-brand-gray">
-                            <p class="text-[10px] text-brand-muted uppercase mb-1">Ganho de Capital (Lucro Fiscal)</p>
-                            <p id="resGanho" class="text-3xl font-black text-brand-success">-</p>
-                        </div>
-
-                        <div class="p-4 bg-brand-orange/10 border-l-4 border-brand-orange rounded">
-                            <p class="text-[10px] text-brand-orange uppercase font-bold">Imposto Estimado</p>
-                            <p id="resImposto" class="text-2xl font-black text-white">-</p>
-                            <p id="resDarfInfo" class="text-[11px] text-brand-muted mt-1 italic"></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="view-guia" class="hidden space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-brand-dark p-6 rounded-lg border border-brand-gray">
-                    <h3 class="text-brand-orange font-black text-xl mb-4 border-b border-brand-gray pb-2">Empresa COM Inscrição Estadual</h3>
-                    <p class="text-sm text-gray-300 mb-4">Mesmo sendo apenas prestadora de serviços, se possuir IE ativa, a saída do bem deve ser feita via <strong>NF-e (Modelo 55)</strong>.</p>
-                    
-                    <div class="space-y-4">
-                        <div class="bg-brand-black p-3 rounded">
-                            <h4 class="text-xs font-bold text-white uppercase mb-2">Dados da Nota Fiscal</h4>
-                            <ul class="text-xs space-y-2 text-brand-muted">
-                                <li><strong class="text-brand-info">CFOP:</strong> 5.551 (Venda de ativo dentro do estado)</li>
-                                <li><strong class="text-brand-info">CFOP:</strong> 6.551 (Venda de ativo fora do estado)</li>
-                                <li><strong class="text-brand-info">CST ICMS:</strong> 041 (Não tributado)</li>
-                                <li><strong class="text-brand-info">CSOSN:</strong> 400 (Simples Nacional - Não tributado)</li>
-                                <li><strong class="text-brand-info">CST PIS/COFINS:</strong> 08 (Operação sem incidência)</li>
-                            </ul>
-                        </div>
-                        <div class="bg-brand-info/10 p-3 border-l-2 border-brand-info text-[11px] text-gray-300">
-                            <strong>Obs. Complementares:</strong> "Não incidência de ICMS conforme Artigo 7º, Inciso XIV do RICMS. Operação de venda de ativo imobilizado."
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-brand-dark p-6 rounded-lg border border-brand-gray">
-                    <h3 class="text-brand-success font-black text-xl mb-4 border-b border-brand-gray pb-2">Empresa SEM Inscrição Estadual</h3>
-                    <p class="text-sm text-gray-300 mb-4">Empresas isentas de IE não emitem NF-e de venda de mercadoria. O documento hábil é a <strong>Declaração de Venda de Ativo</strong> acompanhada do contrato/recibo.</p>
-                    <button onclick="abrirModeloDeclaracao()" class="w-full bg-brand-gray hover:bg-brand-orange text-white py-3 rounded font-bold transition-all">GERAR MODELO DE DECLARAÇÃO</button>
-                    
-                    <div class="mt-4 bg-brand-black p-3 rounded">
-                        <h4 class="text-xs font-bold text-white uppercase mb-2">Procedimento</h4>
-                        <p class="text-[11px] text-brand-muted leading-relaxed">
-                            1. Emitir declaração em papel timbrado.<br>
-                            2. Anexar cópia da nota fiscal de origem (compra).<br>
-                            3. O comprador utiliza essa declaração para dar entrada no bem ou emitir Nota Fiscal de Entrada.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-brand-dark p-6 rounded-lg border border-brand-gray">
-                <h3 class="text-white font-black text-xl mb-4">Obrigações Acessórias e Vencimentos</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="border border-brand-gray p-4 rounded">
-                        <span class="text-brand-orange font-bold text-xs uppercase">Vencimento do Imposto</span>
-                        <p class="text-sm mt-2">O DARF deve ser pago até o último dia útil do <strong>mês subsequente</strong> ao da venda.</p>
-                    </div>
-                    <div class="border border-brand-gray p-4 rounded">
-                        <span class="text-brand-orange font-bold text-xs uppercase">Controle Contábil</span>
-                        <p class="text-sm mt-2">É obrigatório dar a baixa no Livro Razão e atualizar a planilha de imobilizados para cessar a depreciação.</p>
-                    </div>
-                    <div class="border border-brand-gray p-4 rounded">
-                        <span class="text-brand-orange font-bold text-xs uppercase">DEFIS / ECF</span>
-                        <p class="text-sm mt-2">O ganho de capital deve ser informado na declaração anual da empresa (DEFIS para Simples e ECF para Lucro Presumido).</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="view-historico" class="hidden">
-            <div class="bg-brand-dark rounded-lg border border-brand-gray overflow-hidden">
-                <div class="p-4 border-b border-brand-gray flex justify-between items-center bg-brand-black/50">
-                    <h2 class="font-bold text-white">Registros de Vendas de Ativos</h2>
-                    <div class="flex gap-2 no-print">
-                        <button onclick="exportarDados()" class="text-xs bg-brand-gray px-3 py-1 rounded">Download Backup</button>
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="bg-brand-black text-brand-muted text-[10px] uppercase">
-                            <tr>
-                                <th class="px-4 py-3">Empresa / Bem</th>
-                                <th class="px-4 py-3 text-right">Compra / Data</th>
-                                <th class="px-4 py-3 text-right">Venda / Data</th>
-                                <th class="px-4 py-3 text-right">Ganho</th>
-                                <th class="px-4 py-3 text-right">Imposto (Darf/Venc)</th>
-                                <th class="px-4 py-3 text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabelaHistorico" class="divide-y divide-brand-gray/30"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <div id="modalDeclaracao" class="fixed inset-0 bg-black/90 hidden items-center justify-center z-[70] p-4 no-print">
-        <div class="bg-white text-black p-8 rounded-lg max-w-2xl w-full shadow-2xl overflow-y-auto max-h-[90vh]">
-            <div id="printArea" class="font-serif text-sm space-y-6 leading-relaxed border p-10">
-                <h2 class="text-center text-xl font-bold underline uppercase">Declaração de Venda de Ativo Imobilizado</h2>
-                <p class="mt-10">A empresa <strong id="decl_empresa">[NOME DA EMPRESA]</strong>, inscrita no CNPJ sob o nº <strong id="decl_cnpj">[CNPJ]</strong>, declara para os devidos fins de direito e efeitos fiscais a venda do bem abaixo descrito:</p>
-                <div class="bg-gray-100 p-4 border border-black">
-                    <p><strong>BEM:</strong> <span id="decl_bem"></span></p>
-                    <p><strong>DATA DE VENDA:</strong> <span id="decl_data"></span></p>
-                    <p><strong>VALOR DA OPERAÇÃO:</strong> <span id="decl_valor"></span></p>
-                </div>
-                <p>A presente operação é realizada com **NÃO INCIDÊNCIA de ICMS**, por tratar-se de saída de Ativo Imobilizado, conforme prevê a legislação vigente (Artigo 7º, Inciso XIV do RICMS).</p>
-                <p class="mt-20 text-center">________________________________________________<br>Assinatura do Responsável Legal</p>
-            </div>
-            <div class="mt-6 flex justify-end gap-3">
-                <button onclick="document.getElementById('modalDeclaracao').classList.add('hidden')" class="px-4 py-2 bg-gray-200 rounded">Fechar</button>
-                <button onclick="window.print()" class="bg-black text-white px-4 py-2 rounded">Imprimir Documento</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let historico = JSON.parse(localStorage.getItem('fiscoCapital_v2')) || [];
-        
-        const valorParaReal = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        const parseCurrency = (str) => !str ? 0 : parseFloat(str.replace(/[^\d,]/g, '').replace(',', '.'));
-        
-        function mascaraMoeda(input) {
-            let val = input.value.replace(/\D/g, "");
-            input.value = (parseFloat(val)/100 || 0).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
-        }
-
-        function switchTab(tab) {
-            ['calculadora', 'guia', 'historico'].forEach(t => document.getElementById(`view-${t}`).classList.add('hidden'));
-            document.getElementById(`view-${tab}`).classList.remove('hidden');
-            document.querySelectorAll('.tabs-nav button').forEach(b => b.className = "pb-3 text-brand-muted");
-            document.getElementById(`tab-${tab}`).className = "pb-3 tab-active";
-            if(tab === 'historico') renderHistorico();
-        }
-
-        function calcularDiferencaTempo(inicio, fim) {
-            let d1 = new Date(inicio);
-            let d2 = new Date(fim);
-            let anos = d2.getFullYear() - d1.getFullYear();
-            let meses = d2.getMonth() - d1.getMonth();
-            if (meses < 0) { anos--; meses += 12; }
-            return { anos, meses, totalMeses: (anos * 12) + meses };
-        }
-
-        function calcularSimulacao() {
-            const f = {
-                empresa: document.getElementById('nomeEmpresa').value,
-                regime: document.getElementById('regimeTributario').value,
-                bem: document.getElementById('descricao').value,
-                vlrAq: parseCurrency(document.getElementById('valorAquisicao').value),
-                vlrVenda: parseCurrency(document.getElementById('valorVenda').value),
-                despesas: parseCurrency(document.getElementById('despesasVenda').value),
-                dtAq: document.getElementById('dataAquisicao').value,
-                dtVenda: document.getElementById('dataVenda').value,
-                taxa: parseFloat(document.getElementById('tipoDepreciacao').value)
-            };
-
-            if(!f.empresa || !f.dtAq || !f.dtVenda || f.vlrAq <= 0) { alert("Preencha os campos obrigatórios."); return; }
-
-            const tempo = calcularDiferencaTempo(f.dtAq, f.dtVenda);
-            // Depreciação linear mensal: (Valor / 12 meses) * taxa %
-            let depreciacaoMensal = (f.vlrAq * (f.taxa/100)) / 12;
-            let depreciacaoAcumulada = depreciacaoMensal * tempo.totalMeses;
-            if(depreciacaoAcumulada > f.vlrAq) depreciacaoAcumulada = f.vlrAq;
-
-            const valorContabil = f.vlrAq - depreciacaoAcumulada;
-            const ganhoCapital = (f.vlrVenda - f.despesas) - valorContabil;
-
-            // UI
-            document.getElementById('resTempo').innerText = `${tempo.anos} anos e ${tempo.meses} meses`;
-            document.getElementById('resDepreciacao').innerText = valorParaReal(depreciacaoAcumulada);
-            document.getElementById('resValorContabil').innerText = valorParaReal(valorContabil);
-            
-            const elGanho = document.getElementById('resGanho');
-            elGanho.innerText = valorParaReal(ganhoCapital > 0 ? ganhoCapital : 0);
-            
-            let imposto = 0;
-            let code = "";
-            let venc = "";
-            
-            if(ganhoCapital > 0) {
-                imposto = f.regime === 'simples' ? ganhoCapital * 0.15 : ganhoCapital * 0.34; // 34% estimativa Real/Presumido
-                code = f.regime === 'simples' ? "Código DARF: 0507" : "Código: IRPJ (15% + Adic) e CSLL (9%)";
-                
-                // Vencimento: último dia útil do mês subsequente
-                let dVenda = new Date(f.dtVenda);
-                let proxMes = new Date(dVenda.getFullYear(), dVenda.getMonth() + 2, 0);
-                venc = `Vencimento: ${proxMes.toLocaleDateString('pt-BR')}`;
-            }
-
-            document.getElementById('resImposto').innerText = valorParaReal(imposto);
-            document.getElementById('resDarfInfo').innerText = `${code} | ${venc}`;
-            document.getElementById('cardResultado').classList.replace('opacity-50', 'opacity-100');
-            document.getElementById('cardResultado').classList.remove('pointer-events-none');
-
-            // Explicação
-            explicarFiscal(f, tempo, depreciacaoAcumulada, valorContabil, ganhoCapital);
-
-            // Salvar
-            const novoItem = { ...f, id: document.getElementById('editId').value || Date.now(), imposto, tempoStr: `${tempo.anos}a ${tempo.meses}m`, ganhoCapital, venc, code };
-            salvar(novoItem);
-        }
-
-        function explicarFiscal(f, tempo, depAc, vlrCont, ganho) {
-            const div = document.getElementById('areaExplicacao');
-            div.classList.remove('hidden');
-            
-            document.getElementById('passoAPasso').innerHTML = `
-                <p><strong>1. Cálculo da Depreciação:</strong> A Receita Federal entende que seu bem perde valor com o tempo. Para um item de <strong>${f.taxa}%/ano</strong>, ele deprecia cerca de <strong>${((f.taxa/12).toFixed(2))}% ao mês</strong>. Em ${tempo.totalMeses} meses, o bem perdeu ${valorParaReal(depAc)} do seu valor original.</p>
-                
-                <p><strong>2. O que é Valor Contábil?</strong> É o "valor real" do bem para o fisco hoje. <br>
-                <span class="text-white">Fórmula: Valor Compra (${valorParaReal(f.vlrAq)}) - Depreciação (${valorParaReal(depAc)}) = <strong class="text-brand-orange">${valorParaReal(vlrCont)}</strong>.</span><br>
-                Este é o valor que a Receita Federal estima que o bem vale no seu balanço no momento da venda.</p>
-                
-                <div class="bg-brand-black/50 p-3 border-l-4 border-brand-info">
-                    <p><strong>3. Análise do Ganho de Capital:</strong> Como você vendeu o bem por <strong>${valorParaReal(f.vlrVenda)}</strong>, e ele "valia" contabilmente <strong>${valorParaReal(vlrCont)}</strong>, o governo entende que houve um lucro (Ganho de Capital) de <strong>${valorParaReal(ganho > 0 ? ganho : 0)}</strong>.</p>
-                </div>
-                <p class="text-xs italic text-brand-muted">O imposto incide sobre este ganho porque a venda superou a expectativa de valor residual do ativo.</p>
-            `;
-        }
-
-        function salvar(item) {
-            const index = historico.findIndex(i => i.id == item.id);
-            if(index >= 0) historico[index] = item;
-            else historico.push(item);
-            localStorage.setItem('fiscoCapital_v2', JSON.stringify(historico));
-        }
-
-        function renderHistorico() {
-            const body = document.getElementById('tabelaHistorico');
-            body.innerHTML = historico.map(i => `
-                <tr class="hover:bg-brand-dark border-b border-brand-gray/50">
-                    <td class="px-4 py-3">
-                        <div class="font-bold text-white">${i.empresa}</div>
-                        <div class="text-[10px] text-brand-muted">${i.bem}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <div class="text-white font-mono">${valorParaReal(i.vlrAq)}</div>
-                        <div class="text-[10px] text-brand-info">${new Date(i.dtAq).toLocaleDateString('pt-BR')}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        <div class="text-white font-mono">${valorParaReal(i.vlrVenda)}</div>
-                        <div class="text-[10px] text-brand-orange">${new Date(i.dtVenda).toLocaleDateString('pt-BR')}</div>
-                    </td>
-                    <td class="px-4 py-3 text-right font-bold text-brand-success">${valorParaReal(i.ganhoCapital > 0 ? i.ganhoCapital : 0)}</td>
-                    <td class="px-4 py-3 text-right">
-                        <div class="text-brand-danger font-bold">${valorParaReal(i.imposto)}</div>
-                        <div class="text-[9px] text-brand-muted uppercase">${i.code}<br>${i.venc}</div>
-                    </td>
-                    <td class="px-4 py-3 text-center">
-                         <div class="flex gap-2 justify-center">
-                            <button onclick="carregarEdicao(${i.id})" class="text-brand-info">✎</button>
-                            <button onclick="excluir(${i.id})" class="text-brand-danger">✕</button>
-                         </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
-
-        function carregarEdicao(id) {
-            const item = historico.find(i => i.id == id);
-            document.getElementById('editId').value = item.id;
-            document.getElementById('nomeEmpresa').value = item.empresa;
-            document.getElementById('descricao').value = item.bem;
-            document.getElementById('dataAquisicao').value = item.dtAq;
-            document.getElementById('dataVenda').value = item.dtVenda;
-            document.getElementById('regimeTributario').value = item.regime;
-            document.getElementById('tipoDepreciacao').value = item.taxa;
-            
-            // Forçar máscaras
-            const vAq = document.getElementById('valorAquisicao'); vAq.value = (item.vlrAq*100).toFixed(0); mascaraMoeda(vAq);
-            const vVd = document.getElementById('valorVenda'); vVd.value = (item.vlrVenda*100).toFixed(0); mascaraMoeda(vVd);
-            
-            document.getElementById('editModeIndicator').classList.remove('hidden');
-            switchTab('calculadora');
-        }
-
-        function excluir(id) { if(confirm("Excluir registro?")) { historico = historico.filter(i => i.id != id); localStorage.setItem('fiscoCapital_v2', JSON.stringify(historico)); renderHistorico(); } }
-        
-        function limparFormulario() {
-            document.getElementById('calcForm').reset();
-            document.getElementById('editId').value = "";
-            document.getElementById('editModeIndicator').classList.add('hidden');
-            document.getElementById('areaExplicacao').classList.add('hidden');
-            document.getElementById('cardResultado').classList.add('opacity-50', 'pointer-events-none');
-        }
-
-        function abrirModeloDeclaracao() {
-            const nome = document.getElementById('nomeEmpresa').value || "[Nome da Empresa]";
-            document.getElementById('decl_empresa').innerText = nome;
-            document.getElementById('decl_bem').innerText = document.getElementById('descricao').value || "---";
-            document.getElementById('decl_data').innerText = new Date(document.getElementById('dataVenda').value).toLocaleDateString('pt-BR');
-            document.getElementById('decl_valor').innerText = document.getElementById('valorVenda').value;
-            document.getElementById('modalDeclaracao').classList.remove('hidden');
-            document.getElementById('modalDeclaracao').classList.add('flex');
-        }
-
-        function exportarDados() {
-            const blob = new Blob([JSON.stringify(historico)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'fisco_capital_backup.json'; a.click();
-        }
-    </script>
-</body>
-</html>
+    salvar(novoItem);
+    alert(editId ? "Registro Atualizado!" : "Cálculo Salvo!");
+    limparFormulario();
+    switchTab('historico');
+}
