@@ -131,6 +131,26 @@
                         Entenda o Cálculo
                     </h3>
                     <div id="passoAPasso" class="text-sm text-gray-300 leading-relaxed space-y-4"></div>
+                    
+                    <!-- BOTÕES DE AÇÕES EXTRAS -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                        <button id="btnDetalhar" type="button" onclick="toggleDetalhes()" class="w-full bg-brand-black hover:bg-brand-gray text-brand-info py-3 rounded font-mono text-xs uppercase tracking-widest transition-colors border border-brand-gray/50 shadow-md font-bold">
+                            + Detalhamento Matemático
+                        </button>
+                        <button id="btnTextoCliente" type="button" onclick="toggleTextoCliente()" class="w-full bg-brand-black hover:bg-brand-gray text-brand-success py-3 rounded font-mono text-xs uppercase tracking-widest transition-colors border border-brand-gray/50 shadow-md font-bold">
+                            + Texto para o Cliente
+                        </button>
+                    </div>
+                    
+                    <!-- ÁREA DO DETALHAMENTO MATEMÁTICO OCULTA -->
+                    <div id="areaDetalhes" class="hidden mt-4 pt-6 border-t border-brand-gray/50 space-y-4 font-mono text-[11px] text-gray-400 leading-relaxed bg-brand-black/40 p-5 rounded-lg shadow-inner">
+                        <!-- Conteúdo será injetado pelo JavaScript -->
+                    </div>
+
+                    <!-- ÁREA DO TEXTO EXPLICATIVO PARA O CLIENTE -->
+                    <div id="areaTextoCliente" class="hidden mt-4 pt-6 border-t border-brand-gray/50 space-y-4 text-sm text-gray-200 leading-relaxed bg-brand-black/40 p-5 rounded-lg shadow-inner">
+                        <!-- Conteúdo será injetado pelo JavaScript -->
+                    </div>
                 </div>
             </div>
 
@@ -449,6 +469,41 @@
             i.value = (parseFloat(v)/100 || 0).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
         }
 
+        function toggleDetalhes() {
+            const area = document.getElementById('areaDetalhes');
+            const btn = document.getElementById('btnDetalhar');
+            if (area.classList.contains('hidden')) {
+                area.classList.remove('hidden');
+                btn.innerText = "- Ocultar Detalhamento Matemático";
+            } else {
+                area.classList.add('hidden');
+                btn.innerText = "+ Detalhamento Matemático";
+            }
+        }
+
+        function toggleTextoCliente() {
+            const area = document.getElementById('areaTextoCliente');
+            const btn = document.getElementById('btnTextoCliente');
+            if (area.classList.contains('hidden')) {
+                area.classList.remove('hidden');
+                btn.innerText = "- Ocultar Texto para o Cliente";
+            } else {
+                area.classList.add('hidden');
+                btn.innerText = "+ Texto para o Cliente";
+            }
+        }
+
+        function copiarTextoCliente() {
+            const textToCopy = document.getElementById('conteudoTextoCliente').innerText;
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = textToCopy;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempTextArea);
+            alert("Texto copiado com sucesso! Agora é só colar para o seu cliente.");
+        }
+
         function switchTab(t) {
             ['calculadora', 'guia', 'historico', 'doacao'].forEach(v => document.getElementById(`view-${v}`).classList.add('hidden'));
             document.getElementById(`view-${t}`).classList.remove('hidden');
@@ -474,7 +529,7 @@
             });
         }
 
-        // --- CÁLCULO VENDA (AGORA APENAS SIMULA) ---
+        // --- CÁLCULO VENDA (AGORA APENAS SIMULA E DETALHA) ---
         function calcularSimulacao() {
             const f = {
                 empresa: document.getElementById('nomeEmpresa').value,
@@ -491,13 +546,33 @@
             if(!f.vlrAq || !f.dtAq || !f.dtVenda) { alert("Preencha as datas e o valor de aquisição."); return; }
 
             const tempo = calcularTempoMesFechado(f.dtAq, f.dtVenda);
-            let depAc = ((f.vlrAq * (f.taxa/100)) / 12) * tempo.totalMeses;
-            if(depAc > f.vlrAq) depAc = f.vlrAq;
+            
+            // Variáveis matemáticas para o detalhamento
+            const taxaMensal = f.taxa / 12;
+            const depreciacaoMensal = (f.vlrAq * (f.taxa/100)) / 12;
+            
+            let depAc = depreciacaoMensal * tempo.totalMeses;
+            let depAcLimitada = false;
+
+            if(depAc >= f.vlrAq) {
+                depAc = f.vlrAq;
+                depAcLimitada = true;
+            }
+
             const vlrCont = f.vlrAq - depAc;
-            const ganho = (f.vlrVenda - f.despesas) - vlrCont;
-            const imposto = ganho > 0 ? (f.regime === 'simples' ? ganho * 0.15 : ganho * 0.34) : 0;
-            const dtObj = new Date(f.dtVenda);
-            const venc = new Date(dtObj.getFullYear(), dtObj.getMonth() + 2, 0); 
+            const vlrVendaLiquida = f.vlrVenda - f.despesas;
+            const ganho = vlrVendaLiquida - vlrCont;
+            
+            const aliqImposto = f.regime === 'simples' ? 15 : 34;
+            const imposto = ganho > 0 ? ganho * (aliqImposto / 100) : 0;
+            
+            // CORREÇÃO DE FUSO HORÁRIO: Lendo a string diretamente
+            let [anoV_str, mesV_str, diaV_str] = f.dtVenda.split('-');
+            let anoV = parseInt(anoV_str);
+            let mesV = parseInt(mesV_str);
+            
+            // Último dia do mês seguinte:
+            const venc = new Date(anoV, mesV + 1, 0); 
             const codeVenda = f.regime==='simples'?'0507':'IRPJ/CSLL';
 
             // Display UI
@@ -511,6 +586,8 @@
             document.getElementById('cardResultado').classList.remove('pointer-events-none');
 
             document.getElementById('areaExplicacao').classList.remove('hidden');
+            
+            // Texto do passo a passo simples
             document.getElementById('passoAPasso').innerHTML = `
                 <p><strong>1. Cálculo da Depreciação:</strong> O bem perdeu ${valorParaReal(depAc)} do seu valor original em ${tempo.totalMeses} meses.</p>
                 <p><strong>2. O que é Valor Contábil?</strong> É o "valor real" do bem para o fisco hoje. <br>
@@ -519,6 +596,122 @@
                     <p><strong>3. Análise Fiscal do Ganho:</strong> Pelo bem ter sido vendido acima do valor contábil esperado (${valorParaReal(vlrCont)}), você obteve um lucro tributável de <strong>${valorParaReal(ganho > 0 ? ganho : 0)}</strong>.</p>
                 </div>
             `;
+
+            // Resetar botão e view do detalhamento matemático e texto do cliente
+            document.getElementById('areaDetalhes').classList.add('hidden');
+            document.getElementById('btnDetalhar').innerText = "+ Detalhamento Matemático";
+            
+            document.getElementById('areaTextoCliente').classList.add('hidden');
+            document.getElementById('btnTextoCliente').innerText = "+ Texto para o Cliente";
+
+            // Injetar a lógica avançada e super detalhada no quadrinho extra
+            const dateC = f.dtAq.split('-').reverse().join('/');
+            const dateV = f.dtVenda.split('-').reverse().join('/');
+            
+            document.getElementById('areaDetalhes').innerHTML = `
+                <p class="text-white font-bold text-sm mb-3 border-b border-brand-gray pb-2 uppercase">Passo a Passo Matemático</p>
+                <ul class="space-y-4">
+                    <li>
+                        <strong class="text-brand-info text-xs">1. Contagem de Tempo em Meses:</strong><br>
+                        Da data da compra (${dateC}) até a data da venda (${dateV}), foram contabilizados exatos <strong>${tempo.totalMeses} meses</strong> de posse do ativo.
+                    </li>
+                    <li>
+                        <strong class="text-brand-info text-xs">2. Fração Mensal de Depreciação:</strong><br>
+                        A taxa selecionada na legislação é de ${f.taxa}% ao ano.<br>
+                        Dividindo-se isso pelos 12 meses do ano: ${f.taxa}% / 12 = <strong>${taxaMensal.toFixed(4).replace('.',',')}% ao mês</strong> de desvalorização.
+                    </li>
+                    <li>
+                        <strong class="text-brand-info text-xs">3. Desvalorização Financeira:</strong><br>
+                        Aplicando a taxa sobre a compra: ${valorParaReal(f.vlrAq)} * ${taxaMensal.toFixed(4).replace('.',',')}% = <strong>${valorParaReal(depreciacaoMensal)} ao mês</strong>.<br>
+                        Depreciação Acumulada da Vida Útil: ${valorParaReal(depreciacaoMensal)} * ${tempo.totalMeses} meses = <strong class="${depAcLimitada ? 'text-brand-orange' : 'text-white'}">${valorParaReal(depAc)}</strong>.
+                        ${depAcLimitada ? `<br><em class="text-brand-orange text-[9px]">* Nota: O cálculo atingiu 100% de depreciação. O bem não pode depreciar mais que o valor pago na compra.</em>` : ''}
+                    </li>
+                    <li>
+                        <strong class="text-brand-info text-xs">4. Apuração do Valor Residual:</strong><br>
+                        Valor de Compra (${valorParaReal(f.vlrAq)}) - Depreciação Acumulada (${valorParaReal(depAc)}) = <strong>${valorParaReal(vlrCont)}</strong>.<br>
+                        <em class="text-brand-muted text-[10px] bg-brand-black p-2 block mt-2 border border-brand-gray/50 rounded">
+                            <strong class="text-white">Atenção Especial:</strong> A Receita Federal consideraria que houve <strong>ZERO Ganho de Capital</strong> 
+                            e nenhuma tributação, se a empresa tivesse vendido este bem exatamente pelo seu valor contábil residual de ${valorParaReal(vlrCont)}.
+                        </em>
+                    </li>
+                    <li>
+                        <strong class="text-brand-info text-xs">5. Identificação do Ganho de Capital Real:</strong><br>
+                        Como o veículo foi vendido por ${valorParaReal(f.vlrVenda)} ${f.despesas > 0 ? `(deduzido de ${valorParaReal(f.despesas)} em despesas de venda, restando <strong>${valorParaReal(vlrVendaLiquida)}</strong>)` : ''}, este valor supera o residual contábil.<br>
+                        Cálculo do Lucro (Ganho de Capital): ${valorParaReal(vlrVendaLiquida)} (Venda) - ${valorParaReal(vlrCont)} (Residual) = <strong class="text-white text-sm">${valorParaReal(ganho > 0 ? ganho : 0)}</strong>.
+                    </li>
+                    ${ganho > 0 ? `
+                    <li>
+                        <strong class="text-brand-orange text-xs">6. Cálculo do Imposto à Pagar:</strong><br>
+                        O Regime Tributário desta empresa é o ${f.regime === 'simples' ? 'Simples Nacional' : 'Lucro Presumido'}, que determina a alíquota de ${aliqImposto}% sobre o Lucro.<br>
+                        Equação Final: ${valorParaReal(ganho)} (Lucro) * ${aliqImposto}% = <strong class="text-brand-orange text-sm">${valorParaReal(imposto)}</strong> de DARF devido.
+                    </li>
+                    ` : `
+                    <li>
+                        <strong class="text-brand-success text-xs">6. Isenção de Imposto:</strong><br>
+                        Como a venda não gerou lucro frente ao valor contábil (Ganho de Capital = R$ 0,00), a Receita Federal isenta esta operação do pagamento de IRPJ ou CSLL.
+                    </li>
+                    `}
+                </ul>
+            `;
+
+            // Gerar o texto didático para enviar ao cliente
+            let nomeRegime = f.regime === 'simples' ? 'Simples Nacional' : 'Lucro Presumido';
+            const mesesNomes = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            let mesVendaExtenso = mesesNomes[mesV - 1];
+
+            let textoClienteHTML = `
+                <div id="conteudoTextoCliente" class="space-y-4 font-sans text-brand-text">
+                    <h3 class="font-bold text-lg text-brand-orange">Análise Fiscal: Simulação de Venda de Ativo (${f.bem || 'Não especificado'})</h3>
+                    
+                    <div>
+                        <strong class="text-white">1. Entendendo o cenário da sua venda:</strong><br>
+                        Você adquiriu este bem por ${valorParaReal(f.vlrAq)}. Pelas regras da Receita Federal, bens de empresas sofrem uma desvalorização (depreciação) contábil com o passar do tempo. No seu caso, após ${tempo.totalMeses} meses de uso, o Fisco considera que seu bem vale hoje ${valorParaReal(vlrCont)}. Ou seja: para o Governo, esse seria o valor "esperado" de venda após o tempo de uso.
+                    </div>
+            `;
+
+            if (ganho > 0) {
+                textoClienteHTML += `
+                    <div>
+                        <strong class="text-white">2. Análise do Resultado:</strong><br>
+                        Como você pretende realizar a venda por ${valorParaReal(vlrVendaLiquida)} — um valor superior aos ${valorParaReal(vlrCont)} que a Receita Federal calculava —, o Governo entende que a sua empresa obteve um "lucro" na operação. Esse lucro é o que chamamos de Ganho de Capital, que no seu caso foi de <strong>${valorParaReal(ganho)}</strong>.
+                    </div>
+                    
+                    <div>
+                        <strong class="text-brand-orange">3. Imposto a Pagar:</strong><br>
+                        Sobre esse ganho, aplica-se a regra do ${nomeRegime}: uma alíquota de ${aliqImposto}%. Portanto, o imposto calculado sobre os ${valorParaReal(ganho)} resulta em <strong>${valorParaReal(imposto)}</strong>.
+                    </div>
+
+                    <div class="bg-brand-black/50 p-4 border-l-4 border-brand-info rounded">
+                        <strong class="text-brand-info">4. Guia de Pagamento (DARF) e Prazos:</strong><br>
+                        O recolhimento deve ser feito através de um DARF (Código ${codeVenda}). É importante se atentar à regra de vencimento para o seu planejamento financeiro:<br><br>
+                        <strong>Regra de Vencimento:</strong> O prazo é atrelado à data de emissão da Nota Fiscal de venda. O imposto vence, obrigatoriamente, no último dia útil do mês seguinte ao mês em que a nota for emitida.<br><br>
+                        <strong>Exemplo:</strong> Caso a nota seja emitida em <strong>${mesVendaExtenso} de ${anoV}</strong>, o vencimento oficial será no dia <strong>${venc.toLocaleDateString('pt-BR')}</strong>.
+                    </div>
+                `;
+            } else {
+                textoClienteHTML += `
+                    <div>
+                        <strong class="text-white">2. Análise do Resultado:</strong><br>
+                        Como você pretende realizar a venda por ${valorParaReal(vlrVendaLiquida)}, que é um valor igual ou inferior aos ${valorParaReal(vlrCont)} que a Receita Federal calculava, o Governo entende que a sua empresa <strong>não obteve lucro</strong> na operação.
+                    </div>
+                    
+                    <div>
+                        <strong class="text-brand-success">3. Imposto a Pagar:</strong><br>
+                        Por não ter gerado o chamado Ganho de Capital, <strong>não há nenhum imposto a ser pago</strong> referente a essa venda. A operação é isenta de IRPJ/CSLL.
+                    </div>
+                `;
+            }
+
+            textoClienteHTML += `
+                    <p class="mt-4 italic text-brand-muted text-sm">Ficamos à total disposição caso tenha qualquer dúvida ou precise de mais esclarecimentos!</p>
+                </div>
+                <button onclick="copiarTextoCliente()" class="mt-4 w-full bg-brand-orange hover:bg-brand-orangeHover text-white px-4 py-3 rounded text-sm font-black uppercase transition-colors shadow-lg tracking-widest flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    Copiar Texto para Enviar ao Cliente
+                </button>
+            `;
+
+            document.getElementById('areaTextoCliente').innerHTML = textoClienteHTML;
 
             // Guarda estado globalmente para quando o utilizador clicar em Gravar
             currentVenda = { 
@@ -593,10 +786,18 @@
             let ir = 0, itcmd = 0, txAplicada = (f.uf === 'SP' ? 0.04 : 0.05);
             let explain = "";
 
-            const dtObjSaida = new Date(f.dtSaida);
-            const vencIR = new Date(dtObjSaida.getFullYear(), dtObjSaida.getMonth() + 2, 0).toLocaleDateString('pt-BR');
-            const dtITCMD = new Date(dtObjSaida.getTime() + (30 * 24 * 60 * 60 * 1000));
+            // CORREÇÃO DE FUSO HORÁRIO
+            let [anoS_str, mesS_str, diaS_str] = f.dtSaida.split('-');
+            let anoS = parseInt(anoS_str);
+            let mesS = parseInt(mesS_str);
+            let diaS = parseInt(diaS_str);
+
+            const vencIRDate = new Date(anoS, mesS + 1, 0);
+            const vencIR = vencIRDate.toLocaleDateString('pt-BR');
+            
+            const dtITCMD = new Date(anoS, mesS - 1, diaS + 30);
             const vencITCMD = dtITCMD.toLocaleDateString('pt-BR');
+            
             const codeIR = f.regime === 'simples' ? '0507' : 'IRPJ/CSLL';
             const codeITCMD = '066-2';
 
@@ -852,6 +1053,12 @@
             
             document.getElementById('areaExplicacao').classList.add('hidden');
             document.getElementById('don_areaExplicacao').classList.add('hidden');
+            
+            // Ocultar Detalhes Matemáticos e Texto do Cliente da Venda
+            const areaDetalhes = document.getElementById('areaDetalhes');
+            if (areaDetalhes) areaDetalhes.classList.add('hidden');
+            const areaTextoCliente = document.getElementById('areaTextoCliente');
+            if (areaTextoCliente) areaTextoCliente.classList.add('hidden');
             
             document.getElementById('btnGravarVenda').classList.add('hidden');
             document.getElementById('btnGravarDoacao').classList.add('hidden');
