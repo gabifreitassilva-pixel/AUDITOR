@@ -968,8 +968,14 @@
                         <span class="text-[9px] px-2 py-0.5 rounded border uppercase font-black ${isDon ? 'bg-brand-info/20 text-brand-info border-brand-info/30' : 'bg-brand-orange/20 text-brand-orange border-brand-orange/30'}">${i.tipo || 'Venda'}</span>
                         <div class="font-bold text-white mt-1">${i.empresa || '-'}</div><div class="text-[10px] text-brand-muted uppercase">${i.bem || '-'}</div>
                     </td>
-                    <td class="px-4 py-6 text-right font-mono text-white">${valorParaReal(i.vlrAq)}<br><span class="text-[10px]">${dC}</span></td>
-                    <td class="px-4 py-6 text-right font-mono text-white">${valorParaReal(i.vlrVenda)}<br><span class="text-[10px]">${dV}</span></td>
+                    <td class="px-4 py-6 text-right font-mono text-white">
+                        ${valorParaReal(i.vlrAq)}<br><span class="text-[10px] text-brand-muted">${dC}</span>
+                        ${i.docC ? `<div class="mt-2"><a href="${i.docC}" download="NF_Aquisicao" class="text-[9px] text-brand-info font-black underline tracking-tight hover:text-white transition-colors">📄 VER NF</a></div>` : ''}
+                    </td>
+                    <td class="px-4 py-6 text-right font-mono text-white">
+                        ${valorParaReal(i.vlrVenda)}<br><span class="text-[10px] text-brand-muted">${dV}</span>
+                        ${i.docV ? `<div class="mt-2"><a href="${i.docV}" download="NF_Saida" class="text-[9px] text-brand-orange font-black underline tracking-tight hover:text-white transition-colors">📄 VER NF</a></div>` : ''}
+                    </td>
                     <td class="px-4 py-6 text-right font-black ${i.ganho > 0 ? 'text-brand-success' : 'text-brand-muted'} font-mono">${i.ganho > 0 ? valorParaReal(i.ganho) : '-'}</td>
                     <td class="px-4 py-6 text-right font-black text-brand-danger font-mono">
                         ${valorParaReal(i.imposto)}
